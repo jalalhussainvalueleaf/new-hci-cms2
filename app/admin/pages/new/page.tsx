@@ -193,7 +193,7 @@ export default function NewPagePage() {
                     <SelectValue placeholder="Select parent page" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Parent</SelectItem>
+                    <SelectItem value="none">No Parent</SelectItem>
                     <SelectItem value="about">About Us</SelectItem>
                     <SelectItem value="services">Services</SelectItem>
                     <SelectItem value="contact">Contact</SelectItem>
