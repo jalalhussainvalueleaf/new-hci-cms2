@@ -117,10 +117,12 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-600">Manage user accounts and permissions</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New User
-        </Button>
+        <Link href="/admin/users/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add New User
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
