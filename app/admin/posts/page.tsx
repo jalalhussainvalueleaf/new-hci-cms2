@@ -7,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -71,6 +79,7 @@ const statusColors = {
 export default function PostsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; post: any } | null>(null);
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,17 +94,25 @@ export default function PostsPage() {
   };
 
   const handleEdit = (postId: number) => {
-    const post = posts.find(p => p.id === postId);
-    setAlert({ type: 'success', message: `Editing post: ${post?.title}` });
-    // In a real app, this would navigate to the edit page
+    // Navigate to edit page
+    window.location.href = `/admin/posts/edit/${postId}`;
   };
 
-  const handleDelete = (postId: number) => {
+  const handleDeleteClick = (postId: number) => {
     const post = posts.find(p => p.id === postId);
-    if (confirm(`Are you sure you want to delete "${post?.title}"?`)) {
-      setAlert({ type: 'success', message: `Post "${post?.title}" deleted successfully` });
+    setDeleteModal({ open: true, post });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteModal?.post) {
+      setAlert({ type: 'success', message: `Post "${deleteModal.post.title}" deleted successfully` });
+      setDeleteModal(null);
       // In a real app, this would delete the post from the backend
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal(null);
   };
 
   return (
@@ -178,7 +195,7 @@ export default function PostsPage() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(post.id)}>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(post.id)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -191,6 +208,26 @@ export default function PostsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModal?.open || false} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteModal?.post?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDeleteCancel}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete Post
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
