@@ -1,3 +1,193 @@
+// 'use client';
+
+// import { useState } from 'react';
+// import Link from 'next/link';
+// import { Button } from '@/components/ui/button';
+// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Badge } from '@/components/ui/badge';
+// import { Alert, AlertDescription } from '@/components/ui/alert';
+// import {
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableHead,
+//   TableHeader,
+//   TableRow,
+// } from '@/components/ui/table';
+// import { Input } from '@/components/ui/input';
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from '@/components/ui/dropdown-menu';
+// import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
+
+// const pages = [
+//   {
+//     id: 1,
+//     title: 'About Us',
+//     status: 'published',
+//     author: 'Admin',
+//     date: '2024-01-10',
+//     template: 'Default',
+//   },
+//   {
+//     id: 2,
+//     title: 'Contact',
+//     status: 'published',
+//     author: 'Admin',
+//     date: '2024-01-08',
+//     template: 'Contact',
+//   },
+//   {
+//     id: 3,
+//     title: 'Privacy Policy',
+//     status: 'draft',
+//     author: 'Legal Team',
+//     date: '2024-01-15',
+//     template: 'Legal',
+//   },
+//   {
+//     id: 4,
+//     title: 'Services',
+//     status: 'published',
+//     author: 'Marketing',
+//     date: '2024-01-12',
+//     template: 'Services',
+//   },
+// ];
+
+// const statusColors = {
+//   published: 'bg-green-100 text-green-800',
+//   draft: 'bg-yellow-100 text-yellow-800',
+//   scheduled: 'bg-blue-100 text-blue-800',
+// };
+
+// export default function PagesPage() {
+  // const [searchTerm, setSearchTerm] = useState('');
+  // const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // const filteredPages = pages.filter(page =>
+  //   page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //   page.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //   page.template.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
+
+  // const handleView = (pageId: number) => {
+  //   const page = pages.find(p => p.id === pageId);
+  //   setAlert({ type: 'success', message: `Viewing page: ${page?.title}` });
+  // };
+
+  // const handleEdit = (pageId: number) => {
+  //   const page = pages.find(p => p.id === pageId);
+  //   setAlert({ type: 'success', message: `Editing page: ${page?.title}` });
+  // };
+
+  // const handleDelete = (pageId: number) => {
+  //   const page = pages.find(p => p.id === pageId);
+  //   if (confirm(`Are you sure you want to delete "${page?.title}"?`)) {
+  //     setAlert({ type: 'success', message: `Page "${page?.title}" deleted successfully` });
+  //   }
+  // };
+
+//   return (
+//     <div className="space-y-6">
+//       {alert && (
+//         <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+//           <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+//             {alert.message}
+//           </AlertDescription>
+//         </Alert>
+//       )}
+
+//       <div className="flex justify-between items-center">
+//         <div>
+//           <h1 className="text-2xl font-bold text-gray-900">Pages</h1>
+//           <p className="text-gray-600">Manage your website pages</p>
+//         </div>
+//         <Link href="/admin/pages/new">
+//           <Button>
+//             <Plus className="h-4 w-4 mr-2" />
+//             Add New Page
+//           </Button>
+//         </Link>
+//       </div>
+
+//       <Card>
+//         <CardHeader>
+//           <div className="flex justify-between items-center">
+//             <CardTitle>All Pages</CardTitle>
+//             <div className="relative w-64">
+//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+//               <Input
+//                 placeholder="Search pages..."
+//                 value={searchTerm}
+//                 onChange={(e) => setSearchTerm(e.target.value)}
+//                 className="pl-10"
+//               />
+//             </div>
+//           </div>
+//         </CardHeader>
+//         <CardContent>
+//           <Table>
+//             <TableHeader>
+//               <TableRow>
+//                 <TableHead>Title</TableHead>
+//                 <TableHead>Status</TableHead>
+//                 <TableHead>Author</TableHead>
+//                 <TableHead>Template</TableHead>
+//                 <TableHead>Date</TableHead>
+//                 <TableHead className="text-right">Actions</TableHead>
+//               </TableRow>
+//             </TableHeader>
+//             <TableBody>
+              // {filteredPages.map((page) => (
+              //   <TableRow key={page.id}>
+              //     <TableCell className="font-medium">{page.title}</TableCell>
+              //     <TableCell>
+              //       <Badge className={statusColors[page.status as keyof typeof statusColors]}>
+              //         {page.status}
+              //       </Badge>
+              //     </TableCell>
+              //     <TableCell>{page.author}</TableCell>
+              //     <TableCell>{page.template}</TableCell>
+              //     <TableCell>{page.date}</TableCell>
+              //     <TableCell className="text-right">
+              //       <DropdownMenu>
+              //         <DropdownMenuTrigger asChild>
+              //           <Button variant="ghost" size="sm">
+              //             <MoreHorizontal className="h-4 w-4" />
+              //           </Button>
+              //         </DropdownMenuTrigger>
+              //         <DropdownMenuContent align="end">
+              //           <DropdownMenuItem onClick={() => handleView(page.id)}>
+              //             <Eye className="h-4 w-4 mr-2" />
+              //             View
+              //           </DropdownMenuItem>
+              //           <DropdownMenuItem onClick={() => handleEdit(page.id)}>
+              //             <Edit className="h-4 w-4 mr-2" />
+              //             Edit
+              //           </DropdownMenuItem>
+              //           <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(page.id)}>
+              //             <Trash2 className="h-4 w-4 mr-2" />
+              //             Delete
+              //           </DropdownMenuItem>
+              //         </DropdownMenuContent>
+              //       </DropdownMenu>
+              //     </TableCell>
+              //   </TableRow>
+              // ))}
+//             </TableBody>
+//           </Table>
+//         </CardContent>
+//       </Card>
+//     </div>
+//   );
+// }
+
+
+
 'use client';
 
 import { useState } from 'react';
@@ -6,6 +196,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -58,13 +256,54 @@ const pages = [
   },
 ];
 
+// const posts = [
+//   {
+//     id: 1,
+//     title: 'Getting Started with Next.js',
+//     status: 'published',
+//     category: 'Technology',
+//     author: 'John Doe',
+//     date: '2024-01-15',
+//     views: 1250,
+//   },
+//   {
+//     id: 2,
+//     title: 'React Best Practices',
+//     status: 'draft',
+//     category: 'Development',
+//     author: 'Jane Smith',
+//     date: '2024-01-14',
+//     views: 0,
+//   },
+//   {
+//     id: 3,
+//     title: 'Building Responsive Layouts',
+//     status: 'published',
+//     category: 'Design',
+//     author: 'Mike Johnson',
+//     date: '2024-01-13',
+//     views: 890,
+//   },
+//   {
+//     id: 4,
+//     title: 'TypeScript for Beginners',
+//     status: 'scheduled',
+//     category: 'Technology',
+//     author: 'Sarah Wilson',
+//     date: '2024-01-20',
+//     views: 0,
+//   },
+// ];
+
 const statusColors = {
   published: 'bg-green-100 text-green-800',
   draft: 'bg-yellow-100 text-yellow-800',
   scheduled: 'bg-blue-100 text-blue-800',
 };
 
-export default function PagesPage() {
+export default function PostsPage() {
+
+
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -74,14 +313,45 @@ export default function PagesPage() {
     page.template.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleView = (pageId: number) => {
+
+  
+  
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; post: any } | null>(null);
+
+  // const filteredPosts = posts.filter(post =>
+  //   post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //   post.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //   post.author.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
+
+  // const handleView = (postId: number) => {
+  //   const post = posts.find(p => p.id === postId);
+  //   setAlert({ type: 'success', message: `Viewing post: ${post?.title}` });
+  //   // In a real app, this would navigate to the post view
+  // };
+
+  // const handleEdit = (postId: number) => {
+  //   // Navigate to edit page
+  //   window.location.href = `/admin/page/edit/${postId}`;
+  // };
+
+  const handleDeleteClick = (pageId: number) => {
+    // const post = posts.find(p => p.id === postId);
     const page = pages.find(p => p.id === pageId);
-    setAlert({ type: 'success', message: `Viewing page: ${page?.title}` });
+    setDeleteModal({ open: true, pages });
+  };
+
+
+  const handleView = (pageId: number) => {
+    // const page = pages.find(p => p.id === pageId);
+    // setAlert({ type: 'success', message: `Viewing page: ${page?.title}` });
+    window.location.href = `/admin/pages/edit/${pageId}`;
   };
 
   const handleEdit = (pageId: number) => {
-    const page = pages.find(p => p.id === pageId);
-    setAlert({ type: 'success', message: `Editing page: ${page?.title}` });
+    // const page = pages.find(p => p.id === pageId);
+    // setAlert({ type: 'success', message: `Editing page: ${page?.title}` });
+    window.location.href = `/admin/pages/edit/${pageId}`;
   };
 
   const handleDelete = (pageId: number) => {
@@ -89,6 +359,20 @@ export default function PagesPage() {
     if (confirm(`Are you sure you want to delete "${page?.title}"?`)) {
       setAlert({ type: 'success', message: `Page "${page?.title}" deleted successfully` });
     }
+  };
+
+
+
+  const handleDeleteConfirm = () => {
+    if (deleteModal?.post) {
+      setAlert({ type: 'success', message: `Post "${deleteModal.post.title}" deleted successfully` });
+      setDeleteModal(null);
+      // In a real app, this would delete the post from the backend
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal(null);
   };
 
   return (
@@ -103,13 +387,13 @@ export default function PagesPage() {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pages</h1>
-          <p className="text-gray-600">Manage your website pages</p>
+          <h1 className="text-2xl font-bold text-gray-900">Posts</h1>
+          <p className="text-gray-600">Manage your blog posts and articles</p>
         </div>
-        <Link href="/admin/pages/new">
+        <Link href="/admin/posts/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Add New Page
+            Add New Post
           </Button>
         </Link>
       </div>
@@ -117,11 +401,11 @@ export default function PagesPage() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>All Pages</CardTitle>
+            <CardTitle>All Posts</CardTitle>
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search pages..."
+                placeholder="Search posts..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -132,17 +416,19 @@ export default function PagesPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Template</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
+            <TableRow>
+                 <TableHead>Title</TableHead>
+                 <TableHead>Status</TableHead>
+                 <TableHead>Author</TableHead>
+                 <TableHead>Template</TableHead>
+                 <TableHead>Date</TableHead>
+                 <TableHead className="text-right">Actions</TableHead>
+               </TableRow>
+             
             </TableHeader>
             <TableBody>
-              {filteredPages.map((page) => (
+
+            {filteredPages.map((page) => (
                 <TableRow key={page.id}>
                   <TableCell className="font-medium">{page.title}</TableCell>
                   <TableCell>
@@ -169,7 +455,7 @@ export default function PagesPage() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(page.id)}>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(page.id)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -178,10 +464,69 @@ export default function PagesPage() {
                   </TableCell>
                 </TableRow>
               ))}
+
+
+              {/* {filteredPosts.map((post) => (
+                <TableRow key={post.id}>
+                  <TableCell className="font-medium">{post.title}</TableCell>
+                  <TableCell>
+                    <Badge className={statusColors[post.status as keyof typeof statusColors]}>
+                      {post.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{post.category}</TableCell>
+                  <TableCell>{post.author}</TableCell>
+                  <TableCell>{post.date}</TableCell>
+                  <TableCell>{post.views.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleView(post.id)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(post.id)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(post.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))} */}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModal?.open || false} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteModal?.post?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDeleteCancel}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete Post
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
