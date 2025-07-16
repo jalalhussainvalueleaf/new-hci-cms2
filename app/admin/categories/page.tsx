@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -66,6 +67,7 @@ const categories = [
 
 export default function CategoriesPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [newCategory, setNewCategory] = useState({
     name: '',
     slug: '',
@@ -80,12 +82,37 @@ export default function CategoriesPage() {
 
   const handleAddCategory = () => {
     // Add category logic here
+    if (!newCategory.name.trim()) {
+      setAlert({ type: 'error', message: 'Category name is required' });
+      return;
+    }
     console.log('Adding category:', newCategory);
+    setAlert({ type: 'success', message: `Category "${newCategory.name}" added successfully` });
     setNewCategory({ name: '', slug: '', description: '', parent: '' });
+  };
+
+  const handleEdit = (categoryId: number) => {
+    const category = categories.find(c => c.id === categoryId);
+    setAlert({ type: 'success', message: `Editing category: ${category?.name}` });
+  };
+
+  const handleDelete = (categoryId: number) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (confirm(`Are you sure you want to delete "${category?.name}"?`)) {
+      setAlert({ type: 'success', message: `Category "${category?.name}" deleted successfully` });
+    }
   };
 
   return (
     <div className="space-y-6">
+      {alert && (
+        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
@@ -187,11 +214,11 @@ export default function CategoriesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(category.id)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(category.id)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -65,6 +66,7 @@ const statusColors = {
 
 export default function PagesPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const filteredPages = pages.filter(page =>
     page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,8 +74,33 @@ export default function PagesPage() {
     page.template.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleView = (pageId: number) => {
+    const page = pages.find(p => p.id === pageId);
+    setAlert({ type: 'success', message: `Viewing page: ${page?.title}` });
+  };
+
+  const handleEdit = (pageId: number) => {
+    const page = pages.find(p => p.id === pageId);
+    setAlert({ type: 'success', message: `Editing page: ${page?.title}` });
+  };
+
+  const handleDelete = (pageId: number) => {
+    const page = pages.find(p => p.id === pageId);
+    if (confirm(`Are you sure you want to delete "${page?.title}"?`)) {
+      setAlert({ type: 'success', message: `Page "${page?.title}" deleted successfully` });
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {alert && (
+        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pages</h1>
@@ -134,15 +161,15 @@ export default function PagesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleView(page.id)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(page.id)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(page.id)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>

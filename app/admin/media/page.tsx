@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -69,6 +70,9 @@ export default function MediaPage() {
   const [filterType, setFilterType] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredFiles = mediaFiles.filter(file => {
     const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -82,6 +86,58 @@ export default function MediaPage() {
         ? prev.filter(id => id !== fileId)
         : [...prev, fileId]
     );
+  };
+
+  const handleFileUpload = (files: FileList | null) => {
+    if (!files) return;
+    
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(file => {
+      const validTypes = ['image/', 'video/', 'application/pdf', 'text/'];
+      return validTypes.some(type => file.type.startsWith(type));
+    });
+
+    if (validFiles.length !== fileArray.length) {
+      setAlert({ type: 'error', message: 'Some files were rejected. Only images, videos, PDFs, and text files are allowed.' });
+    }
+
+    if (validFiles.length > 0) {
+      setAlert({ type: 'success', message: `${validFiles.length} file(s) uploaded successfully` });
+      // In a real app, you would upload the files to your backend here
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileUpload(e.dataTransfer.files);
+  };
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDownload = () => {
+    if (selectedFiles.length === 0) return;
+    setAlert({ type: 'success', message: `Downloading ${selectedFiles.length} file(s)` });
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedFiles.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedFiles.length} file(s)?`)) {
+      setAlert({ type: 'success', message: `${selectedFiles.length} file(s) deleted successfully` });
+      setSelectedFiles([]);
+    }
   };
 
   const getFileIcon = (type: string) => {
@@ -99,12 +155,20 @@ export default function MediaPage() {
 
   return (
     <div className="space-y-6">
+      {alert && (
+        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Media Library</h1>
           <p className="text-gray-600">Manage your media files and uploads</p>
         </div>
-        <Button>
+        <Button onClick={handleFileSelect}>
           <Upload className="h-4 w-4 mr-2" />
           Upload Files
         </Button>
@@ -113,7 +177,16 @@ export default function MediaPage() {
       {/* Upload Area */}
       <Card>
         <CardContent className="pt-6">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              isDragging 
+                ? 'border-blue-400 bg-blue-50' 
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Drop files here to upload
@@ -121,9 +194,16 @@ export default function MediaPage() {
             <p className="text-gray-600 mb-4">
               Or click to select files from your computer
             </p>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleFileSelect}>
               Select Files
             </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFileUpload(e.target.files)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -184,11 +264,11 @@ export default function MediaPage() {
                 {selectedFiles.length} file(s) selected
               </span>
               <div className="space-x-2">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={handleDownload}>
                   <Download className="h-4 w-4 mr-1" />
                   Download
                 </Button>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={handleDeleteSelected}>
                   <Trash2 className="h-4 w-4 mr-1" />
                   Delete
                 </Button>

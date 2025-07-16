@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -69,6 +70,7 @@ const statusColors = {
 
 export default function PostsPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,8 +78,36 @@ export default function PostsPage() {
     post.author.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleView = (postId: number) => {
+    const post = posts.find(p => p.id === postId);
+    setAlert({ type: 'success', message: `Viewing post: ${post?.title}` });
+    // In a real app, this would navigate to the post view
+  };
+
+  const handleEdit = (postId: number) => {
+    const post = posts.find(p => p.id === postId);
+    setAlert({ type: 'success', message: `Editing post: ${post?.title}` });
+    // In a real app, this would navigate to the edit page
+  };
+
+  const handleDelete = (postId: number) => {
+    const post = posts.find(p => p.id === postId);
+    if (confirm(`Are you sure you want to delete "${post?.title}"?`)) {
+      setAlert({ type: 'success', message: `Post "${post?.title}" deleted successfully` });
+      // In a real app, this would delete the post from the backend
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {alert && (
+        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Posts</h1>
@@ -140,15 +170,15 @@ export default function PostsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleView(post.id)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(post.id)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(post.id)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
