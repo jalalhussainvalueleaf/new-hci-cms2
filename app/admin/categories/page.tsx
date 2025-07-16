@@ -8,6 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,13 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,6 +69,8 @@ const categories = [
 export default function CategoriesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; category: any } | null>(null);
+  const [editModal, setEditModal] = useState<{ open: boolean; category: any } | null>(null);
   const [newCategory, setNewCategory] = useState({
     name: '',
     slug: '',
@@ -81,7 +84,6 @@ export default function CategoriesPage() {
   );
 
   const handleAddCategory = () => {
-    // Add category logic here
     if (!newCategory.name.trim()) {
       setAlert({ type: 'error', message: 'Category name is required' });
       return;
@@ -91,16 +93,50 @@ export default function CategoriesPage() {
     setNewCategory({ name: '', slug: '', description: '', parent: '' });
   };
 
-  const handleEdit = (categoryId: number) => {
+  const handleEditClick = (categoryId: number) => {
     const category = categories.find(c => c.id === categoryId);
-    setAlert({ type: 'success', message: `Editing category: ${category?.name}` });
+    if (category) {
+      setEditModal({ 
+        open: true, 
+        category: {
+          ...category,
+          editName: category.name,
+          editSlug: category.slug,
+          editDescription: category.description,
+          editParent: category.parent || '',
+        }
+      });
+    }
   };
 
-  const handleDelete = (categoryId: number) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (confirm(`Are you sure you want to delete "${category?.name}"?`)) {
-      setAlert({ type: 'success', message: `Category "${category?.name}" deleted successfully` });
+  const handleEditSave = () => {
+    if (!editModal?.category.editName.trim()) {
+      setAlert({ type: 'error', message: 'Category name is required' });
+      return;
     }
+    console.log('Updating category:', editModal.category);
+    setAlert({ type: 'success', message: `Category "${editModal.category.editName}" updated successfully` });
+    setEditModal(null);
+  };
+
+  const handleEditCancel = () => {
+    setEditModal(null);
+  };
+
+  const handleDeleteClick = (categoryId: number) => {
+    const category = categories.find(c => c.id === categoryId);
+    setDeleteModal({ open: true, category });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteModal?.category) {
+      setAlert({ type: 'success', message: `Category "${deleteModal.category.name}" deleted successfully` });
+      setDeleteModal(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal(null);
   };
 
   return (
@@ -214,11 +250,11 @@ export default function CategoriesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(category.id)}>
+                          <DropdownMenuItem onClick={() => handleEditClick(category.id)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(category.id)}>
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(category.id)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -232,6 +268,84 @@ export default function CategoriesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Category Modal */}
+      <Dialog open={editModal?.open || false} onOpenChange={(open) => !open && handleEditCancel()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>
+              Update the category information below.
+            </DialogDescription>
+          </DialogHeader>
+          {editModal?.category && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editModal.category.editName}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    category: { ...editModal.category, editName: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-slug">Slug</Label>
+                <Input
+                  id="edit-slug"
+                  value={editModal.category.editSlug}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    category: { ...editModal.category, editSlug: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editModal.category.editDescription}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    category: { ...editModal.category, editDescription: e.target.value }
+                  })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleEditCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSave}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModal?.open || false} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Category</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteModal?.category?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDeleteCancel}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

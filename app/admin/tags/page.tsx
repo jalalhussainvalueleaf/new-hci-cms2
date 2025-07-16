@@ -8,6 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -71,6 +79,8 @@ const tags = [
 export default function TagsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; tag: any } | null>(null);
+  const [editModal, setEditModal] = useState<{ open: boolean; tag: any } | null>(null);
   const [newTag, setNewTag] = useState({
     name: '',
     slug: '',
@@ -83,7 +93,6 @@ export default function TagsPage() {
   );
 
   const handleAddTag = () => {
-    // Add tag logic here
     if (!newTag.name.trim()) {
       setAlert({ type: 'error', message: 'Tag name is required' });
       return;
@@ -93,16 +102,49 @@ export default function TagsPage() {
     setNewTag({ name: '', slug: '', description: '' });
   };
 
-  const handleEdit = (tagId: number) => {
+  const handleEditClick = (tagId: number) => {
     const tag = tags.find(t => t.id === tagId);
-    setAlert({ type: 'success', message: `Editing tag: ${tag?.name}` });
+    if (tag) {
+      setEditModal({ 
+        open: true, 
+        tag: {
+          ...tag,
+          editName: tag.name,
+          editSlug: tag.slug,
+          editDescription: tag.description,
+        }
+      });
+    }
   };
 
-  const handleDelete = (tagId: number) => {
-    const tag = tags.find(t => t.id === tagId);
-    if (confirm(`Are you sure you want to delete "${tag?.name}"?`)) {
-      setAlert({ type: 'success', message: `Tag "${tag?.name}" deleted successfully` });
+  const handleEditSave = () => {
+    if (!editModal?.tag.editName.trim()) {
+      setAlert({ type: 'error', message: 'Tag name is required' });
+      return;
     }
+    console.log('Updating tag:', editModal.tag);
+    setAlert({ type: 'success', message: `Tag "${editModal.tag.editName}" updated successfully` });
+    setEditModal(null);
+  };
+
+  const handleEditCancel = () => {
+    setEditModal(null);
+  };
+
+  const handleDeleteClick = (tagId: number) => {
+    const tag = tags.find(t => t.id === tagId);
+    setDeleteModal({ open: true, tag });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteModal?.tag) {
+      setAlert({ type: 'success', message: `Tag "${deleteModal.tag.name}" deleted successfully` });
+      setDeleteModal(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal(null);
   };
 
   return (
@@ -215,11 +257,11 @@ export default function TagsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(tag.id)}>
+                          <DropdownMenuItem onClick={() => handleEditClick(tag.id)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(tag.id)}>
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(tag.id)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -233,6 +275,84 @@ export default function TagsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Tag Modal */}
+      <Dialog open={editModal?.open || false} onOpenChange={(open) => !open && handleEditCancel()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Tag</DialogTitle>
+            <DialogDescription>
+              Update the tag information below.
+            </DialogDescription>
+          </DialogHeader>
+          {editModal?.tag && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editModal.tag.editName}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    tag: { ...editModal.tag, editName: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-slug">Slug</Label>
+                <Input
+                  id="edit-slug"
+                  value={editModal.tag.editSlug}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    tag: { ...editModal.tag, editSlug: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editModal.tag.editDescription}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    tag: { ...editModal.tag, editDescription: e.target.value }
+                  })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleEditCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSave}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModal?.open || false} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Tag</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteModal?.tag?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDeleteCancel}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete Tag
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
