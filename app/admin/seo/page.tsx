@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, ExternalLink } from 'lucide-react';
 
 export default function SEOPage() {
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [seoSettings, setSeoSettings] = useState({
     siteTitle: 'My Awesome Website',
     tagline: 'Building amazing digital experiences',
@@ -25,14 +27,28 @@ export default function SEOPage() {
     enableRobots: true,
     enableOpenGraph: true,
     enableTwitterCards: true,
+    robotsContent: `User-agent: *
+Disallow: /admin/
+Disallow: /private/
+
+Sitemap: https://yoursite.com/sitemap.xml`,
   });
 
   const handleSave = () => {
     console.log('Saving SEO settings:', seoSettings);
+    setAlert({ type: 'success', message: 'SEO settings saved successfully' });
   };
 
   return (
     <div className="space-y-6">
+      {alert && (
+        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">SEO Settings</h1>
@@ -224,6 +240,22 @@ export default function SEOPage() {
                   onCheckedChange={(checked) => setSeoSettings({ ...seoSettings, enableRobots: checked })}
                 />
               </div>
+
+              {seoSettings.enableRobots && (
+                <div>
+                  <Label htmlFor="robots-content">Robots.txt Content</Label>
+                  <Textarea
+                    id="robots-content"
+                    value={seoSettings.robotsContent}
+                    onChange={(e) => setSeoSettings({ ...seoSettings, robotsContent: e.target.value })}
+                    rows={8}
+                    className="mt-1 font-mono text-sm"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Configure how search engines crawl your site
+                  </p>
+                </div>
+              )}
 
               {seoSettings.enableSitemap && (
                 <div className="p-4 bg-green-50 rounded-lg">

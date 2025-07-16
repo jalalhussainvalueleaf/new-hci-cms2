@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -100,6 +101,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,8 +112,45 @@ export default function UsersPage() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  const handleViewProfile = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    setAlert({ type: 'success', message: `Viewing profile: ${user?.name}` });
+  };
+
+  const handleEditUser = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    setAlert({ type: 'success', message: `Editing user: ${user?.name}` });
+  };
+
+  const handleSuspendUser = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    if (confirm(`Are you sure you want to suspend ${user?.name}?`)) {
+      setAlert({ type: 'success', message: `User ${user?.name} suspended successfully` });
+    }
+  };
+
+  const handleActivateUser = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    setAlert({ type: 'success', message: `User ${user?.name} activated successfully` });
+  };
+
+  const handleDeleteUser = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    if (confirm(`Are you sure you want to delete ${user?.name}? This action cannot be undone.`)) {
+      setAlert({ type: 'success', message: `User ${user?.name} deleted successfully` });
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {alert && (
+        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
@@ -242,26 +281,26 @@ export default function UsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewProfile(user.id)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditUser(user.id)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit User
                         </DropdownMenuItem>
                         {user.status === 'active' ? (
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSuspendUser(user.id)}>
                             <UserX className="h-4 w-4 mr-2" />
                             Suspend User
                           </DropdownMenuItem>
                         ) : (
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleActivateUser(user.id)}>
                             <UserCheck className="h-4 w-4 mr-2" />
                             Activate User
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user.id)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete User
                         </DropdownMenuItem>
