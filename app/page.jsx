@@ -9,7 +9,7 @@ export default function Home() {
   useEffect(() => {
     // Check if user is authenticated
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    
+    // comment
     if (isAuthenticated) {
       router.push('/admin');
     } else {
