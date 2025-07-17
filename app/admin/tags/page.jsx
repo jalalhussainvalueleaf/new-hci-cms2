@@ -31,91 +31,99 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 
-const categories = [
+const tags = [
   {
     id: 1,
-    name: 'Technology',
-    slug: 'technology',
-    description: 'Posts about technology and innovation',
-    count: 12,
-    parent: null,
+    name: 'JavaScript',
+    slug: 'javascript',
+    description: 'Posts about JavaScript programming',
+    count: 15,
   },
   {
     id: 2,
-    name: 'Development',
-    slug: 'development',
-    description: 'Web and software development articles',
-    count: 8,
-    parent: 'Technology',
+    name: 'React',
+    slug: 'react',
+    description: 'React framework and library content',
+    count: 12,
   },
   {
     id: 3,
-    name: 'Design',
-    slug: 'design',
-    description: 'UI/UX and graphic design content',
-    count: 6,
-    parent: null,
+    name: 'Next.js',
+    slug: 'nextjs',
+    description: 'Next.js framework tutorials and guides',
+    count: 8,
   },
   {
     id: 4,
-    name: 'Business',
-    slug: 'business',
-    description: 'Business and entrepreneurship',
-    count: 4,
-    parent: null,
+    name: 'TypeScript',
+    slug: 'typescript',
+    description: 'TypeScript language and best practices',
+    count: 10,
+  },
+  {
+    id: 5,
+    name: 'CSS',
+    slug: 'css',
+    description: 'Styling and CSS-related content',
+    count: 7,
+  },
+  {
+    id: 6,
+    name: 'UI/UX',
+    slug: 'ui-ux',
+    description: 'User interface and experience design',
+    count: 5,
   },
 ];
 
-export default function CategoriesPage() {
+export default function TagsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; category: any } | null>(null);
-  const [editModal, setEditModal] = useState<{ open: boolean; category: any } | null>(null);
-  const [newCategory, setNewCategory] = useState({
+  const [alert, setAlert] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [editModal, setEditModal] = useState(null);
+  const [newTag, setNewTag] = useState({
     name: '',
     slug: '',
     description: '',
-    parent: '',
   });
 
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTags = tags.filter(tag =>
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tag.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddCategory = () => {
-    if (!newCategory.name.trim()) {
-      setAlert({ type: 'error', message: 'Category name is required' });
+  const handleAddTag = () => {
+    if (!newTag.name.trim()) {
+      setAlert({ type: 'error', message: 'Tag name is required' });
       return;
     }
-    console.log('Adding category:', newCategory);
-    setAlert({ type: 'success', message: `Category "${newCategory.name}" added successfully` });
-    setNewCategory({ name: '', slug: '', description: '', parent: '' });
+    console.log('Adding tag:', newTag);
+    setAlert({ type: 'success', message: `Tag "${newTag.name}" added successfully` });
+    setNewTag({ name: '', slug: '', description: '' });
   };
 
-  const handleEditClick = (categoryId: number) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (category) {
+  const handleEditClick = (tagId) => {
+    const tag = tags.find(t => t.id === tagId);
+    if (tag) {
       setEditModal({ 
         open: true, 
-        category: {
-          ...category,
-          editName: category.name,
-          editSlug: category.slug,
-          editDescription: category.description,
-          editParent: category.parent || '',
+        tag: {
+          ...tag,
+          editName: tag.name,
+          editSlug: tag.slug,
+          editDescription: tag.description,
         }
       });
     }
   };
 
   const handleEditSave = () => {
-    if (!editModal?.category.editName.trim()) {
-      setAlert({ type: 'error', message: 'Category name is required' });
+    if (!editModal?.tag.editName.trim()) {
+      setAlert({ type: 'error', message: 'Tag name is required' });
       return;
     }
-    console.log('Updating category:', editModal.category);
-    setAlert({ type: 'success', message: `Category "${editModal.category.editName}" updated successfully` });
+    console.log('Updating tag:', editModal.tag);
+    setAlert({ type: 'success', message: `Tag "${editModal.tag.editName}" updated successfully` });
     setEditModal(null);
   };
 
@@ -123,14 +131,14 @@ export default function CategoriesPage() {
     setEditModal(null);
   };
 
-  const handleDeleteClick = (categoryId: number) => {
-    const category = categories.find(c => c.id === categoryId);
-    setDeleteModal({ open: true, category });
+  const handleDeleteClick = (tagId) => {
+    const tag = tags.find(t => t.id === tagId);
+    setDeleteModal({ open: true, tag });
   };
 
   const handleDeleteConfirm = () => {
-    if (deleteModal?.category) {
-      setAlert({ type: 'success', message: `Category "${deleteModal.category.name}" deleted successfully` });
+    if (deleteModal?.tag) {
+      setAlert({ type: 'success', message: `Tag "${deleteModal.tag.name}" deleted successfully` });
       setDeleteModal(null);
     }
   };
@@ -151,65 +159,65 @@ export default function CategoriesPage() {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-          <p className="text-gray-600">Organize your posts with categories</p>
+          <h1 className="text-2xl font-bold text-gray-900">Tags</h1>
+          <p className="text-gray-600">Organize your posts with tags for better discoverability</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Add New Category */}
+        {/* Add New Tag */}
         <Card>
           <CardHeader>
-            <CardTitle>Add New Category</CardTitle>
+            <CardTitle>Add New Tag</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="category-name">Name</Label>
+              <Label htmlFor="tag-name">Name</Label>
               <Input
-                id="category-name"
-                placeholder="Category name"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                id="tag-name"
+                placeholder="Tag name"
+                value={newTag.name}
+                onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
               />
             </div>
             
             <div>
-              <Label htmlFor="category-slug">Slug</Label>
+              <Label htmlFor="tag-slug">Slug</Label>
               <Input
-                id="category-slug"
-                placeholder="category-slug"
-                value={newCategory.slug}
-                onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })}
+                id="tag-slug"
+                placeholder="tag-slug"
+                value={newTag.slug}
+                onChange={(e) => setNewTag({ ...newTag, slug: e.target.value })}
               />
             </div>
 
             <div>
-              <Label htmlFor="category-description">Description</Label>
+              <Label htmlFor="tag-description">Description</Label>
               <Textarea
-                id="category-description"
-                placeholder="Category description"
-                value={newCategory.description}
-                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                id="tag-description"
+                placeholder="Tag description (optional)"
+                value={newTag.description}
+                onChange={(e) => setNewTag({ ...newTag, description: e.target.value })}
                 rows={3}
               />
             </div>
 
-            <Button onClick={handleAddCategory} className="w-full">
+            <Button onClick={handleAddTag} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
-              Add Category
+              Add Tag
             </Button>
           </CardContent>
         </Card>
 
-        {/* Categories List */}
+        {/* Tags List */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle>All Categories</CardTitle>
+              <CardTitle>All Tags</CardTitle>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search categories..."
+                  placeholder="Search tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -229,19 +237,18 @@ export default function CategoriesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCategories.map((category) => (
-                  <TableRow key={category.id}>
+                {filteredTags.map((tag) => (
+                  <TableRow key={tag.id}>
                     <TableCell className="font-medium">
-                      {category.parent && <span className="text-gray-400">— </span>}
-                      {category.name}
+                      {tag.name}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {category.description}
+                      {tag.description}
                     </TableCell>
                     <TableCell className="text-sm font-mono">
-                      {category.slug}
+                      {tag.slug}
                     </TableCell>
-                    <TableCell>{category.count}</TableCell>
+                    <TableCell>{tag.count}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -250,11 +257,11 @@ export default function CategoriesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditClick(category.id)}>
+                          <DropdownMenuItem onClick={() => handleEditClick(tag.id)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(category.id)}>
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(tag.id)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -269,25 +276,25 @@ export default function CategoriesPage() {
         </Card>
       </div>
 
-      {/* Edit Category Modal */}
+      {/* Edit Tag Modal */}
       <Dialog open={editModal?.open || false} onOpenChange={(open) => !open && handleEditCancel()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
+            <DialogTitle>Edit Tag</DialogTitle>
             <DialogDescription>
-              Update the category information below.
+              Update the tag information below.
             </DialogDescription>
           </DialogHeader>
-          {editModal?.category && (
+          {editModal?.tag && (
             <div className="space-y-4">
               <div>
                 <Label htmlFor="edit-name">Name</Label>
                 <Input
                   id="edit-name"
-                  value={editModal.category.editName}
+                  value={editModal.tag.editName}
                   onChange={(e) => setEditModal({
                     ...editModal,
-                    category: { ...editModal.category, editName: e.target.value }
+                    tag: { ...editModal.tag, editName: e.target.value }
                   })}
                 />
               </div>
@@ -295,10 +302,10 @@ export default function CategoriesPage() {
                 <Label htmlFor="edit-slug">Slug</Label>
                 <Input
                   id="edit-slug"
-                  value={editModal.category.editSlug}
+                  value={editModal.tag.editSlug}
                   onChange={(e) => setEditModal({
                     ...editModal,
-                    category: { ...editModal.category, editSlug: e.target.value }
+                    tag: { ...editModal.tag, editSlug: e.target.value }
                   })}
                 />
               </div>
@@ -306,10 +313,10 @@ export default function CategoriesPage() {
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
                   id="edit-description"
-                  value={editModal.category.editDescription}
+                  value={editModal.tag.editDescription}
                   onChange={(e) => setEditModal({
                     ...editModal,
-                    category: { ...editModal.category, editDescription: e.target.value }
+                    tag: { ...editModal.tag, editDescription: e.target.value }
                   })}
                   rows={3}
                 />
@@ -331,9 +338,9 @@ export default function CategoriesPage() {
       <Dialog open={deleteModal?.open || false} onOpenChange={(open) => !open && handleDeleteCancel()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
+            <DialogTitle>Delete Tag</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteModal?.category?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{deleteModal?.tag?.name}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -341,7 +348,7 @@ export default function CategoriesPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete Category
+              Delete Tag
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -29,7 +29,7 @@ export default function LoginPage() {
     if (error) setError('');
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
@@ -120,7 +120,7 @@ export default function LoginPage() {
                   <Checkbox
                     id="rememberMe"
                     checked={formData.rememberMe}
-                    onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
+                    onCheckedChange={(checked) => handleInputChange('rememberMe', checked)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="rememberMe" className="text-sm text-gray-600">

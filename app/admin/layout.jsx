@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { Sidebar } from '@/components/admin/Sidebar';
 import { Header } from '@/components/admin/Header';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (

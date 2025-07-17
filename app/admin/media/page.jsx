@@ -68,11 +68,11 @@ const mediaFiles = [
 export default function MediaPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [alert, setAlert] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
   const filteredFiles = mediaFiles.filter(file => {
     const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -80,7 +80,7 @@ export default function MediaPage() {
     return matchesSearch && matchesType;
   });
 
-  const toggleFileSelection = (fileId: number) => {
+  const toggleFileSelection = (fileId) => {
     setSelectedFiles(prev => 
       prev.includes(fileId) 
         ? prev.filter(id => id !== fileId)
@@ -88,7 +88,7 @@ export default function MediaPage() {
     );
   };
 
-  const handleFileUpload = (files: FileList | null) => {
+  const handleFileUpload = (files) => {
     if (!files) return;
     
     const fileArray = Array.from(files);
@@ -107,17 +107,17 @@ export default function MediaPage() {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = (e) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     handleFileUpload(e.dataTransfer.files);
@@ -140,7 +140,7 @@ export default function MediaPage() {
     }
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type) => {
     switch (type) {
       case 'image':
         return '🖼️';
