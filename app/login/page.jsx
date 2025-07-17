@@ -34,26 +34,31 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
-    // Simulate login process
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, accept any non-empty credentials
-      if (formData.username && formData.password) {
-        // Set authentication state
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('user', JSON.stringify({
-          name: 'Admin User',
-          email: 'admin@example.com',
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           username: formData.username,
-          role: 'administrator'
-        }));
-        router.push('/admin');
-      } else {
-        setError('Please enter both username and password.');
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Login failed');
+        return;
       }
+      
+      // Set authentication state
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('user', JSON.stringify(data.user));
+      router.push('/admin');
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }

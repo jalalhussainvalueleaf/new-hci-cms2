@@ -27,9 +27,18 @@ export function Header({ setSidebarOpen }) {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('user');
-    router.push('/login');
+    fetch('/api/auth/logout', { method: 'POST' })
+      .then(() => {
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        router.push('/login');
+      })
+      .catch(() => {
+        // Even if API call fails, clear local storage and redirect
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        router.push('/login');
+      });
   };
 
   const handleProfile = () => {
