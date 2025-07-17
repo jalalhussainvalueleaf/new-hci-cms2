@@ -40,6 +40,14 @@ export default function LoginPage() {
       
       // For demo purposes, accept any non-empty credentials
       if (formData.username && formData.password) {
+        // Set authentication state
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('user', JSON.stringify({
+          name: 'Admin User',
+          email: 'admin@example.com',
+          username: formData.username,
+          role: 'administrator'
+        }));
         router.push('/admin');
       } else {
         setError('Please enter both username and password.');
