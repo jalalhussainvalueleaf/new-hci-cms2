@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, ExternalLink } from 'lucide-react';
 
 export default function SEOPage() {
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [alert, setAlert] = useState(null);
   const [seoSettings, setSeoSettings] = useState({
     siteTitle: 'My Awesome Website',
     tagline: 'Building amazing digital experiences',
