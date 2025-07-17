@@ -78,8 +78,8 @@ const statusColors = {
 
 export default function PostsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; post: any } | null>(null);
+  const [alert, setAlert] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -87,18 +87,18 @@ export default function PostsPage() {
     post.author.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleView = (postId: number) => {
+  const handleView = (postId) => {
     const post = posts.find(p => p.id === postId);
     setAlert({ type: 'success', message: `Viewing post: ${post?.title}` });
     // In a real app, this would navigate to the post view
   };
 
-  const handleEdit = (postId: number) => {
+  const handleEdit = (postId) => {
     // Navigate to edit page
     window.location.href = `/admin/posts/edit/${postId}`;
   };
 
-  const handleDeleteClick = (postId: number) => {
+  const handleDeleteClick = (postId) => {
     const post = posts.find(p => p.id === postId);
     setDeleteModal({ open: true, post });
   };
@@ -171,7 +171,7 @@ export default function PostsPage() {
                 <TableRow key={post.id}>
                   <TableCell className="font-medium">{post.title}</TableCell>
                   <TableCell>
-                    <Badge className={statusColors[post.status as keyof typeof statusColors]}>
+                    <Badge className={statusColors[post.status]}>
                       {post.status}
                     </Badge>
                   </TableCell>

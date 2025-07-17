@@ -29,12 +29,7 @@ const navigation = [
   { name: 'SEO Settings', href: '/admin/seo', icon: Cog6ToothIcon },
 ];
 
-interface SidebarProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}
-
-export function Sidebar({ open, setOpen }: SidebarProps) {
+export function Sidebar({ open, setOpen }) {
   const pathname = usePathname();
 
   return (
