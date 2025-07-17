@@ -91,21 +91,46 @@ export default function MediaPage() {
   const handleFileUpload = (files) => {
     if (!files) return;
     
-    const fileArray = Array.from(files);
-    const validFiles = fileArray.filter(file => {
-      const validTypes = ['image/', 'video/', 'application/pdf', 'text/'];
-      return validTypes.some(type => file.type.startsWith(type));
+    const formData = new FormData();
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
     });
 
-    if (validFiles.length !== fileArray.length) {
-      setAlert({ type: 'error', message: 'Some files were rejected. Only images, videos, PDFs, and text files are allowed.' });
-    }
+    fetch('/api/media/upload', {
+      method: 'POST',
+      body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        setAlert({ type: 'error', message: data.error });
+      } else {
+        setAlert({ type: 'success', message: data.message });
+        // Refresh media list
+        loadMedia();
+      }
+    })
+    .catch(error => {
+      setAlert({ type: 'error', message: 'Upload failed. Please try again.' });
+    });
+  };
 
-    if (validFiles.length > 0) {
-      setAlert({ type: 'success', message: `${validFiles.length} file(s) uploaded successfully` });
-      // In a real app, you would upload the files to your backend here
+  const loadMedia = async () => {
+    try {
+      const response = await fetch('/api/media');
+      const data = await response.json();
+      if (data.media) {
+        // Update mediaFiles state with real data
+        console.log('Media loaded:', data.media);
+      }
+    } catch (error) {
+      console.error('Error loading media:', error);
     }
   };
+
+  useEffect(() => {
+    loadMedia();
+  }, []);
 
   const handleDragOver = (e) => {
     e.preventDefault();
