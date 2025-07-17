@@ -126,13 +126,13 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [alert, setAlert] = useState(null);
   
   // Modal states
-  const [editModal, setEditModal] = useState<{ open: boolean; user: any } | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; user: any } | null>(null);
-  const [suspendModal, setSuspendModal] = useState<{ open: boolean; user: any } | null>(null);
-  const [viewModal, setViewModal] = useState<{ open: boolean; user: any } | null>(null);
+  const [editModal, setEditModal] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [suspendModal, setSuspendModal] = useState(null);
+  const [viewModal, setViewModal] = useState(null);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,12 +143,12 @@ export default function UsersPage() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleViewProfile = (userId: number) => {
+  const handleViewProfile = (userId) => {
     const user = users.find(u => u.id === userId);
     setViewModal({ open: true, user });
   };
 
-  const handleEditClick = (userId: number) => {
+  const handleEditClick = (userId) => {
     const user = users.find(u => u.id === userId);
     if (user) {
       setEditModal({
@@ -180,7 +180,7 @@ export default function UsersPage() {
     setEditModal(null);
   };
 
-  const handleSuspendClick = (userId: number) => {
+  const handleSuspendClick = (userId) => {
     const user = users.find(u => u.id === userId);
     setSuspendModal({ open: true, user });
   };
@@ -197,7 +197,7 @@ export default function UsersPage() {
     setSuspendModal(null);
   };
 
-  const handleDeleteClick = (userId: number) => {
+  const handleDeleteClick = (userId) => {
     const user = users.find(u => u.id === userId);
     setDeleteModal({ open: true, user });
   };
@@ -213,7 +213,7 @@ export default function UsersPage() {
     setDeleteModal(null);
   };
 
-  const getRoleDescription = (role: string) => {
+  const getRoleDescription = (role) => {
     const descriptions = {
       administrator: 'Full access to all features and settings',
       editor: 'Can publish and manage posts, pages, and comments',
@@ -221,7 +221,7 @@ export default function UsersPage() {
       contributor: 'Can write and manage their own posts but cannot publish',
       subscriber: 'Can only manage their profile and read content',
     };
-    return descriptions[role as keyof typeof descriptions] || '';
+    return descriptions[role] || '';
   };
 
   return (
@@ -345,12 +345,12 @@ export default function UsersPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={roleColors[user.role as keyof typeof roleColors]}>
+                    <Badge className={roleColors[user.role]}>
                       {user.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={statusColors[user.status as keyof typeof statusColors]}>
+                    <Badge className={statusColors[user.status]}>
                       {user.status}
                     </Badge>
                   </TableCell>
@@ -416,10 +416,10 @@ export default function UsersPage() {
                   <h3 className="text-lg font-semibold">{viewModal.user.name}</h3>
                   <p className="text-gray-600">{viewModal.user.email}</p>
                   <div className="flex items-center space-x-2 mt-1">
-                    <Badge className={roleColors[viewModal.user.role as keyof typeof roleColors]}>
+                    <Badge className={roleColors[viewModal.user.role]}>
                       {viewModal.user.role}
                     </Badge>
-                    <Badge className={statusColors[viewModal.user.status as keyof typeof statusColors]}>
+                    <Badge className={statusColors[viewModal.user.status]}>
                       {viewModal.user.status}
                     </Badge>
                   </div>
