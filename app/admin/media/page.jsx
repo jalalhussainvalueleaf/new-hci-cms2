@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,64 +14,15 @@ import {
 } from '@/components/ui/select';
 import { Upload, Search, Grid, List, Filter, Download, Trash2 } from 'lucide-react';
 
-const mediaFiles = [
-  {
-    id: 1,
-    name: 'hero-image.jpg',
-    type: 'image',
-    size: '2.4 MB',
-    date: '2024-01-15',
-    url: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260',
-  },
-  {
-    id: 2,
-    name: 'office-team.jpg',
-    type: 'image',
-    size: '1.8 MB',
-    date: '2024-01-14',
-    url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260',
-  },
-  {
-    id: 3,
-    name: 'laptop-desk.jpg',
-    type: 'image',
-    size: '3.1 MB',
-    date: '2024-01-13',
-    url: 'https://images.pexels.com/photos/7376/startup-photos.jpg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260',
-  },
-  {
-    id: 4,
-    name: 'presentation.pdf',
-    type: 'document',
-    size: '5.2 MB',
-    date: '2024-01-12',
-    url: '#',
-  },
-  {
-    id: 5,
-    name: 'product-demo.mp4',
-    type: 'video',
-    size: '45.8 MB',
-    date: '2024-01-11',
-    url: '#',
-  },
-  {
-    id: 6,
-    name: 'logo.svg',
-    type: 'image',
-    size: '24 KB',
-    date: '2024-01-10',
-    url: '#',
-  },
-];
-
 export default function MediaPage() {
+  const [mediaFiles, setMediaFiles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [alert, setAlert] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const fileInputRef = useRef(null);
 
   const filteredFiles = mediaFiles.filter(file => {
@@ -91,6 +42,7 @@ export default function MediaPage() {
   const handleFileUpload = (files) => {
     if (!files) return;
     
+    setIsLoading(true);
     const formData = new FormData();
     Array.from(files).forEach(file => {
       formData.append('files', file);
@@ -106,31 +58,60 @@ export default function MediaPage() {
         setAlert({ type: 'error', message: data.error });
       } else {
         setAlert({ type: 'success', message: data.message });
-        // Refresh media list
         loadMedia();
       }
     })
     .catch(error => {
       setAlert({ type: 'error', message: 'Upload failed. Please try again.' });
+    })
+    .finally(() => {
+      setIsLoading(false);
     });
   };
 
   const loadMedia = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/media');
       const data = await response.json();
       if (data.media) {
-        // Update mediaFiles state with real data
-        console.log('Media loaded:', data.media);
+        const processedMedia = data.media.map(file => ({
+          id: file._id,
+          name: file.name,
+          type: getFileType(file.type),
+          size: formatFileSize(file.size),
+          date: new Date(file.uploadedAt).toLocaleDateString(),
+          url: file.url,
+          mimeType: file.type
+        }));
+        setMediaFiles(processedMedia);
       }
     } catch (error) {
       console.error('Error loading media:', error);
+      setAlert({ type: 'error', message: 'Failed to load media files' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadMedia();
   }, []);
+
+  const getFileType = (mimeType) => {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.includes('pdf') || mimeType.includes('document')) return 'document';
+    return 'file';
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -159,10 +140,24 @@ export default function MediaPage() {
 
   const handleDeleteSelected = () => {
     if (selectedFiles.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedFiles.length} file(s)?`)) {
+    
+    if (!confirm(`Are you sure you want to delete ${selectedFiles.length} file(s)?`)) {
+      return;
+    }
+
+    Promise.all(
+      selectedFiles.map(fileId => 
+        fetch(`/api/media?id=${fileId}`, { method: 'DELETE' })
+      )
+    )
+    .then(() => {
       setAlert({ type: 'success', message: `${selectedFiles.length} file(s) deleted successfully` });
       setSelectedFiles([]);
-    }
+      loadMedia();
+    })
+    .catch(() => {
+      setAlert({ type: 'error', message: 'Failed to delete some files' });
+    });
   };
 
   const getFileIcon = (type) => {
@@ -301,66 +296,72 @@ export default function MediaPage() {
             </div>
           )}
 
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className={`relative group cursor-pointer rounded-lg border-2 ${
-                    selectedFiles.includes(file.id) 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => toggleFileSelection(file.id)}
-                >
-                  <div className="aspect-square p-4 flex flex-col items-center justify-center">
-                    {file.type === 'image' && file.url !== '#' ? (
-                      <img
-                        src={file.url}
-                        alt={file.name}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    ) : (
-                      <div className="text-4xl mb-2">{getFileIcon(file.type)}</div>
-                    )}
-                  </div>
-                  <div className="p-2 border-t">
-                    <p className="text-xs font-medium truncate">{file.name}</p>
-                    <p className="text-xs text-gray-500">{file.size}</p>
-                  </div>
-                  {selectedFiles.includes(file.id) && (
-                    <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">✓</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className={`flex items-center p-3 rounded-lg border cursor-pointer ${
-                    selectedFiles.includes(file.id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => toggleFileSelection(file.id)}
-                >
-                  <div className="text-2xl mr-4">{getFileIcon(file.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-gray-500">{file.type} • {file.size} • {file.date}</p>
-                  </div>
-                  {selectedFiles.includes(file.id) && (
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">✓</span>
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {filteredFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className={`relative group cursor-pointer rounded-lg border-2 ${
+                      selectedFiles.includes(file.id) 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => toggleFileSelection(file.id)}
+                  >
+                    <div className="aspect-square p-4 flex flex-col items-center justify-center">
+                      {file.type === 'image' && file.url !== '#' ? (
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          className="w-full h-full object-cover rounded"
+                        />
+                      ) : (
+                        <div className="text-4xl mb-2">{getFileIcon(file.type)}</div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    <div className="p-2 border-t">
+                      <p className="text-xs font-medium truncate">{file.name}</p>
+                      <p className="text-xs text-gray-500">{file.size}</p>
+                    </div>
+                    {selectedFiles.includes(file.id) && (
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className={`flex items-center p-3 rounded-lg border cursor-pointer ${
+                      selectedFiles.includes(file.id)
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => toggleFileSelection(file.id)}
+                  >
+                    <div className="text-2xl mr-4">{getFileIcon(file.type)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{file.name}</p>
+                      <p className="text-sm text-gray-500">{file.mimeType} • {file.size} • {file.date}</p>
+                    </div>
+                    {selectedFiles.includes(file.id) && (
+                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </CardContent>
       </Card>

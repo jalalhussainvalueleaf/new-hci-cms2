@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,74 +40,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, UserCheck, UserX } from 'lucide-react';
 
-const users = [
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    username: 'johndoe',
-    role: 'administrator',
-    status: 'active',
-    posts: 12,
-    lastLogin: '2024-01-15',
-    avatar: 'JD',
-    bio: 'Senior developer with 10+ years of experience',
-    website: 'https://johndoe.com',
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    username: 'janesmith',
-    role: 'editor',
-    status: 'active',
-    posts: 8,
-    lastLogin: '2024-01-14',
-    avatar: 'JS',
-    bio: 'Content editor and writer',
-    website: '',
-  },
-  {
-    id: 3,
-    name: 'Mike Johnson',
-    email: 'mike.johnson@example.com',
-    username: 'mikejohnson',
-    role: 'author',
-    status: 'active',
-    posts: 15,
-    lastLogin: '2024-01-13',
-    avatar: 'MJ',
-    bio: 'Technical writer and blogger',
-    website: 'https://mikejohnson.blog',
-  },
-  {
-    id: 4,
-    name: 'Sarah Wilson',
-    email: 'sarah.wilson@example.com',
-    username: 'sarahwilson',
-    role: 'contributor',
-    status: 'inactive',
-    posts: 3,
-    lastLogin: '2024-01-10',
-    avatar: 'SW',
-    bio: 'Freelance contributor',
-    website: '',
-  },
-  {
-    id: 5,
-    name: 'David Brown',
-    email: 'david.brown@example.com',
-    username: 'davidbrown',
-    role: 'subscriber',
-    status: 'active',
-    posts: 0,
-    lastLogin: '2024-01-12',
-    avatar: 'DB',
-    bio: 'Regular subscriber',
-    website: '',
-  },
-];
-
 const roleColors = {
   administrator: 'bg-red-100 text-red-800',
   editor: 'bg-blue-100 text-blue-800',
@@ -123,16 +55,51 @@ const statusColors = {
 };
 
 export default function UsersPage() {
+  const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [alert, setAlert] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Modal states
   const [editModal, setEditModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [suspendModal, setSuspendModal] = useState(null);
   const [viewModal, setViewModal] = useState(null);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/users');
+      const data = await response.json();
+      if (data.users) {
+        const processedUsers = data.users.map(user => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          status: user.status,
+          posts: 0, // TODO: Count posts by user
+          lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+          avatar: user.name.split(' ').map(n => n[0]).join(''),
+          bio: user.bio || '',
+          website: user.website || '',
+        }));
+        setUsers(processedUsers);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      setAlert({ type: 'error', message: 'Failed to load users' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -319,6 +286,11 @@ export default function UsersPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -394,6 +366,7 @@ export default function UsersPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
