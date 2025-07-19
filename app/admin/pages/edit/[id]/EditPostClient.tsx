@@ -31,6 +31,7 @@ type Post = {
   allowComments: boolean;
   metaTitle: string;
   metaDescription: string;
+  featuredImage?: string;
 };
 
 interface EditPostClientProps {
