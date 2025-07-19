@@ -38,6 +38,49 @@ export default function NewPostPage() {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const handleSave = async (status: string) => {
+    if (!title.trim()) {
+      alert('Title is required');
+      return;
+    }
+
+    const postData = {
+      title,
+      content,
+      excerpt,
+      status,
+      category,
+      tags,
+      featured,
+      allowComments,
+    };
+
+    try {
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+      });
+
+      const data = await response.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        alert('Post created successfully!');
+        // Reset form or redirect
+        setTitle('');
+        setContent('');
+        setExcerpt('');
+        setCategory('');
+        setTags([]);
+        setFeatured(false);
+        setAllowComments(true);
+      }
+    } catch (error) {
+      alert('Failed to create post');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -50,9 +93,11 @@ export default function NewPostPage() {
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
-          <Button variant="outline">Save Draft</Button>
+          <Button variant="outline" onClick={() => handleSave('draft')}>
+            Save Draft
+          </Button>
           <Button>
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4 mr-2" onClick={() => handleSave('published')} />
             Publish
           </Button>
         </div>

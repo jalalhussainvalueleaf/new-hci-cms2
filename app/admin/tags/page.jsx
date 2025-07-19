@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,61 +31,44 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 
-const tags = [
-  {
-    id: 1,
-    name: 'JavaScript',
-    slug: 'javascript',
-    description: 'Posts about JavaScript programming',
-    count: 15,
-  },
-  {
-    id: 2,
-    name: 'React',
-    slug: 'react',
-    description: 'React framework and library content',
-    count: 12,
-  },
-  {
-    id: 3,
-    name: 'Next.js',
-    slug: 'nextjs',
-    description: 'Next.js framework tutorials and guides',
-    count: 8,
-  },
-  {
-    id: 4,
-    name: 'TypeScript',
-    slug: 'typescript',
-    description: 'TypeScript language and best practices',
-    count: 10,
-  },
-  {
-    id: 5,
-    name: 'CSS',
-    slug: 'css',
-    description: 'Styling and CSS-related content',
-    count: 7,
-  },
-  {
-    id: 6,
-    name: 'UI/UX',
-    slug: 'ui-ux',
-    description: 'User interface and experience design',
-    count: 5,
-  },
-];
-
 export default function TagsPage() {
+  const [tags, setTags] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [editModal, setEditModal] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [newTag, setNewTag] = useState({
     name: '',
     slug: '',
     description: '',
   });
+
+  useEffect(() => {
+    loadTags();
+  }, []);
+
+  const loadTags = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/tags');
+      const data = await response.json();
+      if (data.tags) {
+        setTags(data.tags.map(tag => ({
+          id: tag._id,
+          name: tag.name,
+          slug: tag.slug,
+          description: tag.description,
+          count: tag.count,
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading tags:', error);
+      setAlert({ type: 'error', message: 'Failed to load tags' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredTags = tags.filter(tag =>
     tag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,9 +80,27 @@ export default function TagsPage() {
       setAlert({ type: 'error', message: 'Tag name is required' });
       return;
     }
-    console.log('Adding tag:', newTag);
-    setAlert({ type: 'success', message: `Tag "${newTag.name}" added successfully` });
-    setNewTag({ name: '', slug: '', description: '' });
+    
+    const slug = newTag.slug || newTag.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    
+    fetch('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newTag, slug }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        setAlert({ type: 'error', message: data.error });
+      } else {
+        setAlert({ type: 'success', message: `Tag "${newTag.name}" added successfully` });
+        setNewTag({ name: '', slug: '', description: '' });
+        loadTags();
+      }
+    })
+    .catch(() => {
+      setAlert({ type: 'error', message: 'Failed to create tag' });
+    });
   };
 
   const handleEditClick = (tagId) => {
@@ -226,6 +227,11 @@ export default function TagsPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -272,6 +278,7 @@ export default function TagsPage() {
                 ))}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
       </div>

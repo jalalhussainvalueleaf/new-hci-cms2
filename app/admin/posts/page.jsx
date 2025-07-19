@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,45 +31,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
 
-const posts = [
-  {
-    id: 1,
-    title: 'Getting Started with Next.js',
-    status: 'published',
-    category: 'Technology',
-    author: 'John Doe',
-    date: '2024-01-15',
-    views: 1250,
-  },
-  {
-    id: 2,
-    title: 'React Best Practices',
-    status: 'draft',
-    category: 'Development',
-    author: 'Jane Smith',
-    date: '2024-01-14',
-    views: 0,
-  },
-  {
-    id: 3,
-    title: 'Building Responsive Layouts',
-    status: 'published',
-    category: 'Design',
-    author: 'Mike Johnson',
-    date: '2024-01-13',
-    views: 890,
-  },
-  {
-    id: 4,
-    title: 'TypeScript for Beginners',
-    status: 'scheduled',
-    category: 'Technology',
-    author: 'Sarah Wilson',
-    date: '2024-01-20',
-    views: 0,
-  },
-];
-
 const statusColors = {
   published: 'bg-green-100 text-green-800',
   draft: 'bg-yellow-100 text-yellow-800',
@@ -77,10 +38,40 @@ const statusColors = {
 };
 
 export default function PostsPage() {
+  const [posts, setPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/posts');
+      const data = await response.json();
+      if (data.posts) {
+        const processedPosts = data.posts.map(post => ({
+          id: post._id,
+          title: post.title,
+          status: post.status,
+          category: post.category,
+          author: post.author,
+          date: new Date(post.createdAt).toLocaleDateString(),
+          views: post.views || 0,
+        }));
+        setPosts(processedPosts);
+      }
+    } catch (error) {
+      console.error('Error loading posts:', error);
+      setAlert({ type: 'error', message: 'Failed to load posts' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,9 +96,15 @@ export default function PostsPage() {
 
   const handleDeleteConfirm = () => {
     if (deleteModal?.post) {
-      setAlert({ type: 'success', message: `Post "${deleteModal.post.title}" deleted successfully` });
-      setDeleteModal(null);
-      // In a real app, this would delete the post from the backend
+      fetch(`/api/posts/${deleteModal.post.id}`, { method: 'DELETE' })
+        .then(() => {
+          setAlert({ type: 'success', message: `Post "${deleteModal.post.title}" deleted successfully` });
+          setDeleteModal(null);
+          loadPosts();
+        })
+        .catch(() => {
+          setAlert({ type: 'error', message: 'Failed to delete post' });
+        });
     }
   };
 
@@ -154,6 +151,11 @@ export default function PostsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -206,6 +208,7 @@ export default function PostsPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

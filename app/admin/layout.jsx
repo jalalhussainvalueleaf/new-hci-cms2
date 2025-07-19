@@ -17,6 +17,10 @@ export default function AdminLayout({ children }) {
     if (!isAuthenticated) {
       router.push('/login');
     } else {
+      // Redirect /admin to /admin/dashboard
+      if (window.location.pathname === '/admin') {
+        router.push('/admin/dashboard');
+      }
       setIsLoading(false);
     }
   }, [router]);
