@@ -16,7 +16,28 @@ export async function GET(request, { params }) {
     const client = await clientPromise;
     const db = client.db('wp-database-hci');
     
-    const post = await db.collection('posts').findOne({ _id: new ObjectId(id) });
+    // Explicitly include all necessary fields
+    const post = await db.collection('posts').findOne(
+      { _id: new ObjectId(id) },
+      {
+        projection: {
+          title: 1,
+          content: 1,
+          excerpt: 1,
+          status: 1,
+          category: 1,
+          tags: 1,
+          featured: 1,
+          allowComments: 1,
+          metaTitle: 1,
+          metaDescription: 1,
+          featuredImage: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          publishedAt: 1
+        }
+      }
+    );
 
     if (!post) {
       return NextResponse.json(
@@ -25,7 +46,20 @@ export async function GET(request, { params }) {
       );
     }
 
-    return NextResponse.json({ post });
+    // Ensure featured is a boolean
+    const normalizedPost = {
+      ...post,
+      featured: Boolean(post.featured)
+    };
+
+    console.log('Returning post data:', {
+      _id: normalizedPost._id,
+      title: normalizedPost.title,
+      featured: normalizedPost.featured,
+      featuredImage: normalizedPost.featuredImage
+    });
+
+    return NextResponse.json({ post: normalizedPost });
   } catch (error) {
     console.error('Get post error:', error);
     return NextResponse.json(
@@ -40,8 +74,9 @@ export async function PUT(request, { params }) {
     const { id } = params;
     const postData = await request.json();
     
-    console.log('Received update for post ID:', id);
-    console.log('Update data received:', JSON.stringify(postData, null, 2));
+    console.log('=== REQUEST BODY ===');
+    console.log(JSON.stringify(postData, null, 2));
+    console.log('====================');
     
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -53,8 +88,19 @@ export async function PUT(request, { params }) {
     const client = await clientPromise;
     const db = client.db('wp-database-hci');
 
-    // Log the raw post data received
-    console.log('Raw post data received:', JSON.stringify(postData, null, 2));
+    // Log the raw post data received with all fields
+    console.log('=== RAW POST DATA RECEIVED ===');
+    console.log('Title:', postData.title);
+    console.log('Excerpt:', postData.excerpt);
+    console.log('Category:', postData.category);
+    console.log('Tags:', JSON.stringify(postData.tags, null, 2));
+    console.log('Featured:', postData.featured, '(type:', typeof postData.featured, ')');
+    console.log('Allow Comments:', postData.allowComments);
+    console.log('Meta Title:', postData.metaTitle);
+    console.log('Meta Description:', postData.metaDescription);
+    console.log('Featured Image:', postData.featuredImage);
+    console.log('Status:', postData.status);
+    console.log('=============================');
     
     // Create update data with explicit field mapping
     const updateData = {
@@ -94,25 +140,30 @@ export async function PUT(request, { params }) {
       updatedAt: existingPost?.updatedAt
     }, null, 2));
     
+    // Log the exact update operation we're about to perform
+    console.log('=== UPDATE OPERATION ===');
+    console.log('Collection: posts');
+    console.log('Filter:', { _id: new ObjectId(id) });
+    console.log('Update:', { $set: updateData });
+    
     // Perform the update
-    console.log('Executing updateOne with filter:', { _id: new ObjectId(id) });
     const result = await db.collection('posts').updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     );
     
-    console.log('Update result:', {
-      matchedCount: result.matchedCount,
-      modifiedCount: result.modifiedCount,
-      upsertedId: result.upsertedId,
-      acknowledged: result.acknowledged
-    });
-
-    console.log('Update result:', JSON.stringify({
-      matchedCount: result.matchedCount,
-      modifiedCount: result.modifiedCount,
-      upsertedId: result.upsertedId
-    }, null, 2));
+    console.log('=== UPDATE RESULT ===');
+    console.log('Matched Count:', result.matchedCount);
+    console.log('Modified Count:', result.modifiedCount);
+    console.log('Upserted ID:', result.upsertedId);
+    console.log('Acknowledged:', result.acknowledged);
+    
+    // Fetch the document after update to verify
+    const updatedDoc = await db.collection('posts').findOne({ _id: new ObjectId(id) });
+    console.log('=== DOCUMENT AFTER UPDATE ===');
+    console.log('Featured:', updatedDoc?.featured);
+    console.log('Updated At:', updatedDoc?.updatedAt);
+    console.log('=============================');
 
     if (result.matchedCount === 0) {
       return NextResponse.json(
@@ -136,6 +187,7 @@ export async function PUT(request, { params }) {
       updatedPost: {
         _id: updatedPost._id.toString(),
         title: updatedPost.title,
+        featured: updatedPost.featured || false, // Include featured field
         featuredImage: updatedPost.featuredImage,
         updatedAt: updatedPost.updatedAt,
         status: updatedPost.status

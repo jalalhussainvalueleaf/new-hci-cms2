@@ -1,5 +1,3 @@
-'use client';
-
 import EditPostClient from './EditPostClient';
 import { notFound } from 'next/navigation';
 
@@ -22,7 +20,7 @@ export default async function Page({ params }) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const response = await fetch(`${baseUrl}/api/posts/${params.id}`, {
       // Revalidate the data every 60 seconds
-      next: { revalidate: 60 },
+      // next: { revalidate: 60 },
       headers: {
         'Content-Type': 'application/json',
       },

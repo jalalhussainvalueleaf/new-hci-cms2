@@ -18,7 +18,7 @@ export default function AdminLayout({ children }) {
       router.push('/login');
     } else {
       // Redirect /admin to /admin/dashboard
-      if (window.location.pathname === '/admin') {
+      if (window.location.pathname === '/admin/dashboard') {
         router.push('/admin/dashboard');
       }
       setIsLoading(false);

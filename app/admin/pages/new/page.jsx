@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,106 +15,55 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Save, Eye, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save, Eye } from 'lucide-react';
 
-type Post = {
-  id: number;
-  title: string;
-  content: string;
-  excerpt: string;
-  status: string;
-  category: string;
-  tags: string[];
-  featured: boolean;
-  allowComments: boolean;
-  metaTitle: string;
-  metaDescription: string;
-  featuredImage?: string;
-};
-
-interface EditPostClientProps {
-  postId: number;
-  post: Post | undefined;
-}
-
-export default function EditPostClient({ pageId, page }: EditPostClientProps) {
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-
+export default function NewPagePage() {
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     content: '',
     excerpt: '',
     status: 'draft',
-    category: '',
-    tags: [] as string[],
+    template: 'default',
+    parentPage: '',
+    menuOrder: 0,
+    allowComments: false,
     featured: false,
-    allowComments: true,
     metaTitle: '',
     metaDescription: '',
+    focusKeyword: ''
   });
 
-  const [newTag, setNewTag] = useState('');
-
-  useEffect(() => {
-    if (page) {
-      setFormData({
-        title: page.title,
-        content: page.content,
-        excerpt: page.excerpt,
-        status: page.status,
-        category: page.category,
-        tags: page.tags,
-        featured: page.featured,
-        allowComments: page.allowComments,
-        metaTitle: page.metaTitle,
-        metaDescription: page.metaDescription,
-      });
-    }
-    setLoading(false);
-  }, [page]);
-
-  const handleInputChange = (field: string, value: string | boolean | string[]) => {
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      handleInputChange('tags', [...formData.tags, newTag.trim()]);
-      setNewTag('');
+  const generateSlug = (title) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  const handleTitleChange = (title) => {
+    handleInputChange('title', title);
+    if (!formData.slug) {
+      handleInputChange('slug', generateSlug(title));
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    handleInputChange('tags', formData.tags.filter(tag => tag !== tagToRemove));
-  };
-
-  const handleSave = (status?: string) => {
-    const postData = {
+  const handleSave = (status) => {
+    const pageData = {
       ...formData,
-      status: status || formData.status,
-      updatedAt: new Date().toISOString(),
+      status,
+      createdAt: new Date().toISOString(),
     };
-    console.log('Updating post:', postData);
-    setAlert({ type: 'success', message: `Post "${formData.title}" updated successfully` });
+    console.log('Saving page:', pageData);
+    // Here you would typically save to your backend
   };
-
-  const handlePreview = () => {
-    setAlert({ type: 'success', message: 'Opening preview...' });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -212,7 +161,10 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(value) => handleInputChange('status', value)}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -226,7 +178,10 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
 
               <div>
                 <Label htmlFor="template">Page Template</Label>
-                <Select value={formData.template} onValueChange={(value) => handleInputChange('template', value)}>
+                <Select 
+                  value={formData.template} 
+                  onValueChange={(value) => handleInputChange('template', value)}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -242,12 +197,15 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
 
               <div>
                 <Label htmlFor="parent">Parent Page</Label>
-                <Select value={formData.parentPage} onValueChange={(value) => handleInputChange('parentPage', value)}>
+                <Select 
+                  value={formData.parentPage} 
+                  onValueChange={(value) => handleInputChange('parentPage', value)}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select parent page" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Parent</SelectItem>
+                    <SelectItem value="">No Parent</SelectItem>
                     <SelectItem value="about">About Us</SelectItem>
                     <SelectItem value="services">Services</SelectItem>
                     <SelectItem value="contact">Contact</SelectItem>
@@ -302,6 +260,8 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="metaTitle">Meta Title</Label>
                 <Input
                   id="metaTitle"
+                  value={formData.metaTitle}
+                  onChange={(e) => handleInputChange('metaTitle', e.target.value)}
                   placeholder="SEO title..."
                   className="mt-1"
                 />
@@ -311,6 +271,8 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="metaDescription">Meta Description</Label>
                 <Textarea
                   id="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={(e) => handleInputChange('metaDescription', e.target.value)}
                   placeholder="SEO description..."
                   className="mt-1"
                   rows={3}
@@ -321,6 +283,8 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="focusKeyword">Focus Keyword</Label>
                 <Input
                   id="focusKeyword"
+                  value={formData.focusKeyword}
+                  onChange={(e) => handleInputChange('focusKeyword', e.target.value)}
                   placeholder="Primary keyword..."
                   className="mt-1"
                 />
@@ -331,4 +295,4 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
       </div>
     </div>
   );
-} 
+}

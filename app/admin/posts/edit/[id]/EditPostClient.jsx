@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Save, Eye, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { ArrowLeft, Save, Eye, Upload, X, Image as ImageIcon, CloudCog, Plus } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the MediaLibraryModal to avoid SSR issues
@@ -22,18 +25,26 @@ const MediaLibraryModal = dynamic(
 
 // Accepts postId as a string since it comes from URL parameters
 export default function EditPostClient({ postId, post }) {
-  const [alert, setAlert] = useState(null);
+  const router = useRouter();
+  const { toast } = useToast();
+  // Removed alert state as we're using toast notifications now
   const [loading, setLoading] = useState(true);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: '', slug: '', description: '' });
+  const [categories, setCategories] = useState([]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  
+  // Initialize form data with post data if available, or defaults
   const [formData, setFormData] = useState({
     title: post?.title || '',
     content: post?.content || '',
     excerpt: post?.excerpt || '',
     status: post?.status || 'draft',
     category: post?.category || '',
-    tags: post?.tags || [],
+    tags: Array.isArray(post?.tags) ? [...post.tags] : [],
     featured: post?.featured || false,
-    allowComments: post?.allowComments ?? true,
+    allowComments: post?.allowComments !== undefined ? !!post.allowComments : true,
     metaTitle: post?.metaTitle || '',
     metaDescription: post?.metaDescription || '',
     featuredImage: post?.featuredImage || '',
@@ -43,21 +54,28 @@ export default function EditPostClient({ postId, post }) {
   const [dragActive, setDragActive] = useState(false);
   const [newTag, setNewTag] = useState('');
 
+  // Fetch categories on component mount, but only if not already loaded
+  useEffect(() => {
+    if (categories.length === 0) {
+      const fetchCategories = async () => {
+        try {
+          const response = await fetch('/api/categories');
+          if (response.ok) {
+            const data = await response.json();
+            setCategories(data.categories || []);
+          }
+        } catch (error) {
+          console.error('Error fetching categories:', error);
+        }
+      };
+
+      fetchCategories();
+    }
+  }, [categories.length]);
+
+  // Set loading to false once post is available
   useEffect(() => {
     if (post) {
-      setFormData({
-        title: post.title || '',
-        content: post.content || '',
-        excerpt: post.excerpt || '',
-        status: post.status || 'draft',
-        category: post.category || '',
-        tags: post.tags || [],
-        featured: post.featured || false,
-        allowComments: post.allowComments !== undefined ? post.allowComments : true,
-        metaTitle: post.metaTitle || '',
-        metaDescription: post.metaDescription || '',
-        featuredImage: post.featuredImage || '',
-      });
       setLoading(false);
     }
   }, [post]);
@@ -122,11 +140,18 @@ export default function EditPostClient({ postId, post }) {
         ...prev,
         featuredImage: data.files[0].url
       }));
+      
+      toast({
+        title: 'Success',
+        description: 'Image uploaded successfully!',
+        variant: 'default'
+      });
     } catch (error) {
       console.error('Upload error:', error);
-      setAlert({
-        type: 'error',
-        message: 'Failed to upload image. Please try again.'
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to upload image. Please try again.'
       });
     } finally {
       setIsUploading(false);
@@ -161,8 +186,91 @@ export default function EditPostClient({ postId, post }) {
     }));
   };
 
+  const handleNewCategoryChange = (e) => {
+    const { name, value } = e.target;
+    setNewCategory(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    
+    if (!newCategory.name.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Category name is required'
+      });
+      return;
+    }
+
+    // Generate slug from name if not provided
+    const slug = newCategory.slug.trim() || newCategory.name.trim().toLowerCase().replace(/\s+/g, '-');
+    
+    try {
+      setIsAddingCategory(true);
+      
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...newCategory,
+          slug
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add category');
+      }
+
+      // Update categories list
+      setCategories(prev => [...prev, data.category]);
+      
+      // Set the new category as selected
+      setFormData(prev => ({
+        ...prev,
+        category: data.category._id
+      }));
+
+      // Reset form and close modal
+      setNewCategory({ name: '', slug: '', description: '' });
+      setShowNewCategoryModal(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Category added successfully',
+        variant: 'success'
+      });
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to add category. Please try again.'
+      });
+    } finally {
+      setIsAddingCategory(false);
+    }
+  };
+
   const handleSave = async (status) => {
     try {
+      // Validate required fields
+      if (!formData.title || !formData.content) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Please enter a title and content for your post.'
+        });
+        return;
+      }
+
       // Create a clean copy of form data for submission
       const postData = {
         title: formData.title,
@@ -179,16 +287,7 @@ export default function EditPostClient({ postId, post }) {
         updatedAt: new Date().toISOString(),
       };
       
-      // Debug: Log the exact data being sent
-      console.log('=== DEBUG: Form Data Being Sent ===');
-      console.log('Title:', postData.title);
-      console.log('Featured Image URL:', postData.featuredImage || 'No featured image set');
-      console.log('Status:', postData.status);
-      console.log('==============================');
-      
-      if (!postData.featuredImage) {
-        console.warn('WARNING: No featured image set in the post data');
-      }
+      console.log('Sending PUT request to update post with data:', postData);
       
       const response = await fetch(`/api/posts/${postId}`, {
         method: 'PUT',
@@ -199,37 +298,63 @@ export default function EditPostClient({ postId, post }) {
       });
       
       const responseData = await response.json();
-      console.log('Update response:', responseData);
       
       if (!response.ok) {
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: responseData.error
+        });
         throw new Error(responseData.error || `Failed to update post: ${response.status} ${response.statusText}`);
       }
       
       // After successful save, verify the post was updated
       if (responseData.updatedPost) {
-        console.log('Updated post data from server:', {
-          _id: responseData.updatedPost._id,
-          title: responseData.updatedPost.title,
-          featuredImage: responseData.updatedPost.featuredImage,
-          updatedAt: responseData.updatedPost.updatedAt
+        console.log('Updated post data from server:', responseData.updatedPost);
+        
+        // Create a safe update object with only the fields we want to update
+        const updatedFields = {
+          ...(responseData.updatedPost.title !== undefined && { title: responseData.updatedPost.title }),
+          ...(responseData.updatedPost.content !== undefined && { content: responseData.updatedPost.content }),
+          ...(responseData.updatedPost.excerpt !== undefined && { excerpt: responseData.updatedPost.excerpt }),
+          ...(responseData.updatedPost.status !== undefined && { status: responseData.updatedPost.status }),
+          ...(responseData.updatedPost.category !== undefined && { category: responseData.updatedPost.category }),
+          ...(responseData.updatedPost.tags !== undefined && { tags: responseData.updatedPost.tags }),
+          ...(responseData.updatedPost.featured !== undefined && { featured: responseData.updatedPost.featured }),
+          ...(responseData.updatedPost.allowComments !== undefined && { allowComments: responseData.updatedPost.allowComments }),
+          ...(responseData.updatedPost.metaTitle !== undefined && { metaTitle: responseData.updatedPost.metaTitle }),
+          ...(responseData.updatedPost.metaDescription !== undefined && { metaDescription: responseData.updatedPost.metaDescription }),
+          ...(responseData.updatedPost.featuredImage !== undefined && { featuredImage: responseData.updatedPost.featuredImage }),
+          ...(responseData.updatedPost.updatedAt !== undefined && { updatedAt: responseData.updatedPost.updatedAt })
+        };
+        
+        // Update form data with the response from the server
+        setFormData(prev => ({
+          ...prev,
+          ...updatedFields
+        }));
+        
+        // Show success message
+        const action = status === 'published' ? 'published' : 'saved';
+        toast({
+          title: 'Success',
+          description: `Post "${responseData.updatedPost.title}" ${action} successfully!`,
+          variant: 'success'
         });
+        
+        // If this was a publish action, redirect to posts list
+        if (status === 'published') {
+          router.push('/admin/posts');
+        }
       }
-      
-      setAlert({ 
-        type: 'success', 
-        message: `Post "${formData.title}" ${status === 'published' ? 'published' : 'saved'} successfully` 
-      });
     } catch (error) {
-      console.error('Update error:', error);
-      setAlert({
-        type: 'error',
-        message: 'Failed to update post. Please try again.'
+      console.error('Error saving post:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to save post. Please try again.'
       });
     }
-  };
-
-  const handlePreview = () => {
-    setAlert({ type: 'success', message: 'Opening preview...' });
   };
 
   if (loading) {
@@ -242,13 +367,6 @@ export default function EditPostClient({ postId, post }) {
 
   return (
     <div className="space-y-6">
-      {alert && (
-        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
-          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
-            {alert.message}
-          </AlertDescription>
-        </Alert>
-      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -258,16 +376,48 @@ export default function EditPostClient({ postId, post }) {
               Back to Posts
             </Button>
           </Link>
+          {/* <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                console.log('Test success toast button clicked');
+                toast({
+                  title: 'Success!',
+                  description: 'This is a success toast message',
+                  variant: 'success'
+                });
+              }}
+              className="border-green-500 text-green-700 hover:bg-green-50"
+            >
+              Test Success
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                console.log('Test error toast button clicked');
+                toast({
+                  title: 'Error!',
+                  description: 'This is an error toast message',
+                  variant: 'destructive'
+                });
+              }}
+              className="border-red-500 text-red-700 hover:bg-red-50"
+            >
+              Test Error
+            </Button>
+          </div> */}
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Edit Post</h1>
             <p className="text-gray-600">Update your blog post</p>
           </div>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" onClick={handlePreview}>
+          {/* <Button variant="outline" onClick={handlePreview}>
             <Eye className="h-4 w-4 mr-2" />
             Preview
-          </Button>
+          </Button> */}
           <Button 
             variant="outline" 
             onClick={() => handleSave('draft')}
@@ -327,6 +477,34 @@ export default function EditPostClient({ postId, post }) {
               </div>
             </CardContent>
           </Card>
+           <Card>
+            <CardHeader>
+              <CardTitle>SEO</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="metaTitle">Meta Title</Label>
+                <Input
+                  id="metaTitle"
+                  name="metaTitle"
+                  value={formData.metaTitle}
+                  onChange={handleChange}
+                  placeholder="Enter meta title for SEO"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metaDescription">Meta Description</Label>
+                <Textarea
+                  id="metaDescription"
+                  name="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={handleChange}
+                  placeholder="Enter meta description for SEO"
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -353,24 +531,129 @@ export default function EditPostClient({ postId, post }) {
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="featured">Featured</Label>
-                <Switch
-                  id="featured"
-                  checked={formData.featured}
-                  onCheckedChange={(checked) => handleSelectChange('featured', checked)}
-                />
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="featured"
+                    checked={!!formData.featured}
+                    onCheckedChange={(checked) => {
+                      // console.log('Featured toggle changed to:', checked);
+                      handleSelectChange('featured', checked);
+                    }}
+                  />
+                  {/* <span className="text-sm text-muted-foreground">
+                    {formData.featured ? 'Yes' : 'No'}
+                  </span> */}
+                </div>
               </div>
+
+           
+              
+                  {/* <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">
+                      {formData.featured ? 'Featured' : 'Not Featured'}
+                    </span>
+                    
+                    {Boolean(formData.featured)}
+                    <Switch
+                      key={`featured-${formData.featured}`}
+                      id="featured"
+                      checked={Boolean(formData.featured)}
+                      onCheckedChange={(checked) => {
+                        // console.log('Featured toggle changed:', {
+                        //   checked,
+                        //   type: typeof checked,
+                        //   currentState: formData.featured,
+                        //   currentStateType: typeof formData.featured
+                        // });
+                        // Use handleSelectChange to update the state
+                        handleSelectChange('featured', checked);
+                      }}
+                      onClick={(e) => {
+                        // Prevent event bubbling to avoid any parent click handlers
+                        e.stopPropagation();
+                      }}
+                      className={`${formData.featured ? 'bg-primary' : 'bg-muted'}`}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {formData.featured ? 'Featured' : 'Not Featured'}
+                    </span>
+                  </div> */}
+                {/* </div> */}
+              
               <div className="flex items-center justify-between">
                 <Label htmlFor="allowComments">Allow Comments</Label>
-                <Switch
-                  id="allowComments"
-                  checked={formData.allowComments}
-                  onCheckedChange={(checked) => handleSelectChange('allowComments', checked)}
-                />
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="allowComments"
+                    checked={!!formData.allowComments}
+                    onCheckedChange={(checked) => {
+                      // console.log('Allow Comments toggle changed to:', checked);
+                      handleSelectChange('allowComments', checked);
+                    }}
+                  />
+                  {/* <span className="text-sm text-muted-foreground">
+                    {formData.allowComments ? 'Yes' : 'No'}
+                  </span> */}
+                </div>
               </div>
               <div className="pt-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Categories</Label>
-                  <Button variant="ghost" size="sm" className="text-sm">+ Add New</Button>
+                  <Dialog open={showNewCategoryModal} onOpenChange={setShowNewCategoryModal}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-sm">
+                        <Plus className="h-4 w-4 mr-1" /> Add New
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Category</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddCategory} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="categoryName">Name *</Label>
+                          <Input
+                            id="categoryName"
+                            name="name"
+                            value={newCategory.name}
+                            onChange={handleNewCategoryChange}
+                            placeholder="Category name"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="categorySlug">Slug</Label>
+                          <Input
+                            id="categorySlug"
+                            name="slug"
+                            value={newCategory.slug}
+                            onChange={handleNewCategoryChange}
+                            placeholder="category-slug"
+                          />
+                          <p className="text-xs text-muted-foreground">Leave empty to auto-generate from name</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="categoryDescription">Description</Label>
+                          <Textarea
+                            id="categoryDescription"
+                            name="description"
+                            value={newCategory.description}
+                            onChange={handleNewCategoryChange}
+                            placeholder="Optional description"
+                            rows={3}
+                          />
+                        </div>
+                        <div className="flex justify-end space-x-2 pt-4">
+                          <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <Button type="submit" disabled={isAddingCategory}>
+                            {isAddingCategory ? 'Adding...' : 'Add Category'}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 <Select 
                   value={formData.category} 
@@ -380,9 +663,11 @@ export default function EditPostClient({ postId, post }) {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="technology">Technology</SelectItem>
-                    <SelectItem value="lifestyle">Lifestyle</SelectItem>
-                    <SelectItem value="travel">Travel</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category._id} value={category._id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -434,6 +719,7 @@ export default function EditPostClient({ postId, post }) {
                   className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => setShowMediaLibrary(true)}
                 >
+                  {/* {formData.featuredImage}  */}
                   {formData.featuredImage ? (
                     <div className="relative w-full h-48 rounded-md overflow-hidden group">
                       <img 
@@ -493,34 +779,7 @@ export default function EditPostClient({ postId, post }) {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>SEO</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="metaTitle">Meta Title</Label>
-                <Input
-                  id="metaTitle"
-                  name="metaTitle"
-                  value={formData.metaTitle}
-                  onChange={handleChange}
-                  placeholder="Enter meta title for SEO"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="metaDescription">Meta Description</Label>
-                <Textarea
-                  id="metaDescription"
-                  name="metaDescription"
-                  value={formData.metaDescription}
-                  onChange={handleChange}
-                  placeholder="Enter meta description for SEO"
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+         
         </div>
       </div>
 
