@@ -1,4 +1,4 @@
-import EditPostClient from './EditPostClient';
+import EditPageClient from './EditPageClient';
 
 // Mock data - in a real app, this would come from your backend
 const mockPosts = [
@@ -60,13 +60,27 @@ export function generateStaticParams() {
   return mockPosts.map(page => ({ id: page.id.toString() }));
 }
 
-export default function Page({ params }) {
-  const pageId = parseInt(params.id, 10);
-  const page = mockPosts.find(p => p.id === pageId);
-  
-  if (!page) {
-    return <div>Page not found</div>;
+export const dynamic = 'force-dynamic';
+
+export default async function Page({ params }) {
+  try {
+    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/pages/${params.id}`, {
+      cache: 'no-store',
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch page');
+    }
+    
+    const data = await res.json();
+    
+    if (!data.page) {
+      return <div>Page not found</div>;
+    }
+    
+    return <EditPageClient pageId={params.id} page={data.page} />;
+  } catch (error) {
+    console.error('Error loading page:', error);
+    return <div>Error loading page. Please try again.</div>;
   }
-  
-  return <EditPostClient pageId={pageId} page={page} />;
 }

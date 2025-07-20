@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ import {
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 
 export default function CategoriesPage() {
+  const { toast } = useToast();
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState(null);
@@ -93,15 +96,27 @@ export default function CategoriesPage() {
     .then(response => response.json())
     .then(data => {
       if (data.error) {
-        setAlert({ type: 'error', message: data.error });
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: data.error || 'Failed to create category. Please try again.'
+        });
       } else {
-        setAlert({ type: 'success', message: `Category "${newCategory.name}" added successfully` });
+        toast({
+          title: 'Success',
+          description: `Category "${newCategory.name}" added successfully!`,
+          variant: 'success'
+        });
         setNewCategory({ name: '', slug: '', description: '', parent: '' });
         loadCategories();
       }
     })
     .catch(() => {
-      setAlert({ type: 'error', message: 'Failed to create category' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create category. Please try again.'
+      });
     });
   };
 
@@ -153,13 +168,13 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      {alert && (
+      {/* {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
           <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
             {alert.message}
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       <div className="flex justify-between items-center">
         <div>

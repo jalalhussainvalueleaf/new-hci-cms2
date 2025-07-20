@@ -1,22 +1,62 @@
 import { NextResponse } from 'next/server';
-import { connectToDB } from '@/lib/db';
-import Page from '@/models/Page';
+import clientPromise from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 // GET /api/pages/[id] - Get a single page by ID
 export async function GET(request, { params }) {
+  console.log('GET /api/pages/[id] - Request received for ID:', params.id);
+  
   try {
     const { id } = params;
-    await connectToDB();
     
-    const page = await Page.findById(id);
+    // Validate ObjectId
+    if (!ObjectId.isValid(id)) {
+      console.error('Invalid ObjectId:', id);
+      return NextResponse.json(
+        { error: 'Invalid page ID format' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('Connecting to MongoDB...');
+    const client = await clientPromise;
+    const db = client.db('wp-database-hci');
+    
+    console.log('Querying page with ID:', id);
+    const page = await db.collection('pages').findOne({ _id: new ObjectId(id) });
+    
     if (!page) {
+      console.error('Page not found with ID:', id);
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
       );
     }
     
-    return NextResponse.json({ page });
+    // Convert _id to string for client-side and ensure all fields have proper defaults
+    const pageWithStringId = {
+      ...page,
+      _id: page._id.toString(),
+      // Ensure tags is always an array
+      tags: Array.isArray(page.tags) ? page.tags : [],
+      // Ensure categories is always an array
+      categories: Array.isArray(page.categories) ? page.categories : [],
+      // Ensure all date fields are properly formatted
+      createdAt: page.createdAt ? new Date(page.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: page.updatedAt ? new Date(page.updatedAt).toISOString() : new Date().toISOString(),
+      // Ensure other fields have proper defaults
+      featured: !!page.featured,
+      allowComments: page.allowComments !== false, // Default to true if not set
+      status: page.status || 'draft',
+      template: page.template || 'default',
+      author: page.author || 'Admin'
+    };
+    
+    console.log('Page found:', JSON.stringify(pageWithStringId, null, 2));
+    return NextResponse.json({ 
+      success: true,
+      page: pageWithStringId 
+    });
   } catch (error) {
     console.error('Error fetching page:', error);
     return NextResponse.json(
@@ -31,40 +71,62 @@ export async function PUT(request, { params }) {
   try {
     const { id } = params;
     const data = await request.json();
-    await connectToDB();
     
-    // Find and update the page
-    const updatedPage = await Page.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          title: data.title,
-          content: data.content,
-          excerpt: data.excerpt,
-          status: data.status,
-          slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
-          featured: data.featured,
-          metaTitle: data.metaTitle,
-          metaDescription: data.metaDescription,
-          featuredImage: data.featuredImage,
-          template: data.template,
-          allowComments: data.allowComments,
-          updatedAt: new Date()
-        }
-      },
-      { new: true, runValidators: true }
+    // Validate ObjectId
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid page ID' },
+        { status: 400 }
+      );
+    }
+    
+    const client = await clientPromise;
+    const db = client.db('wp-database-hci');
+    
+    // Prepare update data
+    const updateData = {
+      $set: {
+        title: data.title,
+        content: data.content,
+        excerpt: data.excerpt,
+        status: data.status,
+        slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
+        featured: data.featured,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        featuredImage: data.featuredImage,
+        template: data.template || 'default',
+        allowComments: data.allowComments !== false, // Default to true if not set
+        author: data.author || 'Admin',
+        updatedAt: new Date()
+      }
+    };
+
+    // Update the page in the database
+    const result = await db.collection('pages').updateOne(
+      { _id: new ObjectId(id) },
+      updateData
     );
 
-    if (!updatedPage) {
+    if (result.matchedCount === 0) {
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({
+    // Fetch the updated page
+    const updatedPage = await db.collection('pages').findOne({ _id: new ObjectId(id) });
+
+    // Convert _id to string for client-side
+    const pageWithStringId = {
+      ...updatedPage,
+      _id: updatedPage._id.toString()
+    };
+
+    return NextResponse.json({ 
       message: 'Page updated successfully',
-      page: updatedPage
+      page: pageWithStringId 
     });
   } catch (error) {
     console.error('Error updating page:', error);
@@ -79,18 +141,29 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = params;
-    await connectToDB();
     
-    const deletedPage = await Page.findByIdAndDelete(id);
+    // Validate ObjectId
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid page ID' },
+        { status: 400 }
+      );
+    }
     
-    if (!deletedPage) {
+    const client = await clientPromise;
+    const db = client.db('wp-database-hci');
+    
+    // Delete the page
+    const result = await db.collection('pages').deleteOne({ _id: new ObjectId(id) });
+    
+    if (result.deletedCount === 0) {
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
       );
     }
-
-    return NextResponse.json({
+    
+    return NextResponse.json({ 
       message: 'Page deleted successfully',
       pageId: id
     });

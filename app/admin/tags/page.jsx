@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ import {
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 
 export default function TagsPage() {
+  const { toast } = useToast();
   const [tags, setTags] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState(null);
@@ -91,15 +94,27 @@ export default function TagsPage() {
     .then(response => response.json())
     .then(data => {
       if (data.error) {
-        setAlert({ type: 'error', message: data.error });
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: data.error || 'Failed to create tag. Please try again.'
+        });
       } else {
-        setAlert({ type: 'success', message: `Tag "${newTag.name}" added successfully` });
+        toast({
+          title: 'Success',
+          description: `Tag "${newTag.name}" added successfully!`,
+          variant: 'success'
+        });
         setNewTag({ name: '', slug: '', description: '' });
         loadTags();
       }
     })
     .catch(() => {
-      setAlert({ type: 'error', message: 'Failed to create tag' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create tag. Please try again.'
+      });
     });
   };
 
@@ -120,11 +135,19 @@ export default function TagsPage() {
 
   const handleEditSave = () => {
     if (!editModal?.tag.editName.trim()) {
-      setAlert({ type: 'error', message: 'Tag name is required' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Tag name is required'
+      });
       return;
     }
     console.log('Updating tag:', editModal.tag);
-    setAlert({ type: 'success', message: `Tag "${editModal.tag.editName}" updated successfully` });
+    toast({
+      title: 'Success',
+      description: `Tag "${editModal.tag.editName}" updated successfully!`,
+      variant: 'success'
+    });
     setEditModal(null);
   };
 
@@ -139,7 +162,11 @@ export default function TagsPage() {
 
   const handleDeleteConfirm = () => {
     if (deleteModal?.tag) {
-      setAlert({ type: 'success', message: `Tag "${deleteModal.tag.name}" deleted successfully` });
+      toast({
+        title: 'Success',
+        description: `Tag "${deleteModal.tag.name}" deleted successfully!`,
+        variant: 'success'
+      });
       setDeleteModal(null);
     }
   };
@@ -150,14 +177,6 @@ export default function TagsPage() {
 
   return (
     <div className="space-y-6">
-      {alert && (
-        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
-          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
-            {alert.message}
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tags</h1>

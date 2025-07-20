@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
-import { connectToDB } from '@/lib/db';
-import Page from '@/models/Page';
+import clientPromise from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 // GET /api/pages - Get all pages
 export async function GET() {
   try {
-    await connectToDB();
-    const pages = await Page.find({}).sort({ createdAt: -1 });
+    const client = await clientPromise;
+    const db = client.db('wp-database-hci');
+    
+    const pages = await db.collection('pages')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
     return NextResponse.json({ pages });
   } catch (error) {
     console.error('Error fetching pages:', error);
@@ -21,14 +27,25 @@ export async function GET() {
 export async function POST(request) {
   try {
     const data = await request.json();
-    await connectToDB();
     
-    const newPage = new Page({
+    if (!data.title || !data.content) {
+      return NextResponse.json(
+        { error: 'Title and content are required' },
+        { status: 400 }
+      );
+    }
+
+    const client = await clientPromise;
+    const db = client.db('wp-database-hci');
+    
+    const newPage = {
       title: data.title,
       content: data.content,
-      excerpt: data.excerpt,
+      excerpt: data.excerpt || '',
       status: data.status || 'draft',
-      slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
+      slug: data.slug || data.title.toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]+/g, ''),
       featured: data.featured || false,
       metaTitle: data.metaTitle || data.title,
       metaDescription: data.metaDescription || data.excerpt || '',
@@ -36,11 +53,17 @@ export async function POST(request) {
       template: data.template || 'default',
       author: data.author || 'Admin',
       allowComments: data.allowComments !== undefined ? data.allowComments : true,
-    });
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    const savedPage = await newPage.save();
+    const result = await db.collection('pages').insertOne(newPage);
+    
     return NextResponse.json(
-      { message: 'Page created successfully', page: savedPage },
+      { 
+        message: 'Page created successfully', 
+        page: { _id: result.insertedId, ...newPage }
+      },
       { status: 201 }
     );
   } catch (error) {

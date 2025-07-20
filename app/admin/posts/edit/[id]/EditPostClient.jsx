@@ -287,7 +287,7 @@ export default function EditPostClient({ postId, post }) {
         updatedAt: new Date().toISOString(),
       };
       
-      console.log('Sending PUT request to update post with data:', postData);
+      // console.log('Sending PUT request to update post with data:', postData);
       
       const response = await fetch(`/api/posts/${postId}`, {
         method: 'PUT',
