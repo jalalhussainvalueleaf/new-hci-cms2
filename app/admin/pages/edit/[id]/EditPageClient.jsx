@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { slugify } from '@/lib/slugify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -60,7 +61,7 @@ export default function EditPageClient({ pageId, page }) {
     updatedAt: new Date()
 
   });
-console.log('pageId',pageId)
+
   // Fetch all pages for parent selection
   useEffect(() => {
     const fetchPages = async () => {
@@ -221,11 +222,34 @@ console.log('pageId',pageId)
  
 
 
+  // Generate slug from title when title changes and slug is empty
+  // useEffect(() => {
+  //         if (field === 'title') {
+  //              console.log('title changed', slugify(value));
+  //            setFormData(prev => ({
+  //              ...prev,
+  //              slug: slugify(value)
+  //            }));
+  //          }
+  // }, [formData.title]);
+
   const handleInputChange = (field, value) => {
+    if (field === 'title') {
+      console.log('title changed', slugify(value));
+    setFormData(prev => ({
+      ...prev,
+      slug: slugify(value)
+    }));
+  }
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleSlugChange = (e) => {
+    const newSlug = slugify(e.target.value);
+    handleInputChange('slug', newSlug);
   };
 
   const handleSave = async (status) => {
@@ -357,6 +381,17 @@ console.log('pageId',pageId)
                   value={formData.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
                   placeholder="Enter page title"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug</Label>
+                <Input
+                  id="slug"
+                  value={formData.slug || ''}
+                  onChange={handleSlugChange}
+                  className="mt-1"
+                  placeholder="Auto-generated from title"
                 />
               </div>
               

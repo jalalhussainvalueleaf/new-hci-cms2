@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { slugify } from '@/lib/slugify';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +35,16 @@ export default function NewPagePage() {
     focusKeyword: ''
   });
 
+  // Generate slug from title when title changes and slug is empty
+  useEffect(() => {
+    if (formData.title && !formData.slug) {
+      setFormData(prev => ({
+        ...prev,
+        slug: slugify(prev.title)
+      }));
+    }
+  }, [formData.title]);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -41,17 +52,15 @@ export default function NewPagePage() {
     }));
   };
 
-  const generateSlug = (title) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
+  const handleSlugChange = useCallback((e) => {
+    const newSlug = slugify(e.target.value);
+    handleInputChange('slug', newSlug);
+  }, []);
 
   const handleTitleChange = (title) => {
     handleInputChange('title', title);
     if (!formData.slug) {
-      handleInputChange('slug', generateSlug(title));
+      handleInputChange('slug', slugify(title));
     }
   };
 
@@ -61,7 +70,7 @@ export default function NewPagePage() {
       status,
       createdAt: new Date().toISOString(),
     };
-    console.log('Saving page:', pageData);
+    // console.log('Saving page:', pageData);
     // Here you would typically save to your backend
   };
 
@@ -117,10 +126,10 @@ export default function NewPagePage() {
                 <Label htmlFor="slug">Slug</Label>
                 <Input
                   id="slug"
-                  value={formData.slug}
-                  onChange={(e) => handleInputChange('slug', e.target.value)}
-                  placeholder="page-slug"
+                  value={formData.slug || ''}
+                  onChange={handleSlugChange}
                   className="mt-1"
+                  placeholder="Auto-generated from title"
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   URL: /pages/{formData.slug || 'page-slug'}

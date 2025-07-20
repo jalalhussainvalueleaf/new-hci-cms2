@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { slugify } from '@/lib/slugify';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,14 @@ export default function EditPostClient({ postId, post }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'title') {
+        console.log('title changed', slugify(value));
+      setFormData(prev => ({
+        ...prev,
+        slug: slugify(value)
+      }));
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -94,6 +103,38 @@ export default function EditPostClient({ postId, post }) {
       [name]: value
     }));
   };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSlugChange = (e) => {
+    // Only auto-update slug if it hasn't been manually modified
+    // or if it matches the auto-generated slug from the title
+    const currentTitleSlug = slugify(formData.title);
+    if (!formData.slug || formData.slug === currentTitleSlug) {
+      const newSlug = slugify(e.target.value);
+      handleInputChange('slug', newSlug);
+    } else {
+      // If user manually edited the slug, respect their changes
+      handleInputChange('slug', e.target.value);
+    }
+  };
+  
+  // Update slug when title changes
+  useEffect(() => {
+    // Only auto-update slug if it hasn't been manually modified
+    // or if it's empty
+    if (formData.title && (!formData.slug || formData.slug === slugify(formData.title))) {
+      setFormData(prev => ({
+        ...prev,
+        slug: slugify(prev.title)
+      }));
+    }
+  }, [formData.title]);
 
   const handleTagKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -284,6 +325,7 @@ export default function EditPostClient({ postId, post }) {
         metaTitle: formData.metaTitle,
         metaDescription: formData.metaDescription,
         featuredImage: formData.featuredImage || '',
+        slug: formData.slug,
         updatedAt: new Date().toISOString(),
       };
       
@@ -325,6 +367,7 @@ export default function EditPostClient({ postId, post }) {
           ...(responseData.updatedPost.metaTitle !== undefined && { metaTitle: responseData.updatedPost.metaTitle }),
           ...(responseData.updatedPost.metaDescription !== undefined && { metaDescription: responseData.updatedPost.metaDescription }),
           ...(responseData.updatedPost.featuredImage !== undefined && { featuredImage: responseData.updatedPost.featuredImage }),
+          ...(responseData.updatedPost.slug !== undefined && { slug: responseData.updatedPost.slug }),
           ...(responseData.updatedPost.updatedAt !== undefined && { updatedAt: responseData.updatedPost.updatedAt })
         };
         
@@ -451,6 +494,17 @@ export default function EditPostClient({ postId, post }) {
                   value={formData.title}
                   onChange={handleChange}
                   placeholder="Enter post title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug</Label>
+                <Input
+                  id="slug"
+                  name="slug"
+                  value={formData.slug}
+                  onChange={handleSlugChange}
+                  placeholder="Auto-generated from title"
+                  className="mt-1"
                 />
               </div>
               <div className="space-y-2">

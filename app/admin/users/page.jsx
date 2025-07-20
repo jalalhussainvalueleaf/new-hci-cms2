@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 import {
   Dialog,
   DialogContent,
@@ -55,6 +57,7 @@ const statusColors = {
 };
 
 export default function UsersPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -95,7 +98,11 @@ export default function UsersPage() {
       }
     } catch (error) {
       console.error('Error loading users:', error);
-      setAlert({ type: 'error', message: 'Failed to load users' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load users. Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -135,11 +142,19 @@ export default function UsersPage() {
 
   const handleEditSave = () => {
     if (!editModal?.user.editName.trim() || !editModal?.user.editEmail.trim()) {
-      setAlert({ type: 'error', message: 'Name and email are required' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Name and email are required'
+      });
       return;
     }
     console.log('Updating user:', editModal.user);
-    setAlert({ type: 'success', message: `User "${editModal.user.editName}" updated successfully` });
+    toast({
+      title: 'Success',
+      description: `User "${editModal.user.editName}" updated successfully!`,
+      variant: 'success'
+    });
     setEditModal(null);
   };
 
@@ -155,7 +170,11 @@ export default function UsersPage() {
   const handleSuspendConfirm = () => {
     if (suspendModal?.user) {
       const action = suspendModal.user.status === 'active' ? 'suspended' : 'activated';
-      setAlert({ type: 'success', message: `User "${suspendModal.user.name}" ${action} successfully` });
+      toast({
+        title: 'Success',
+        description: `User "${suspendModal.user.name}" ${action} successfully!`,
+        variant: 'success'
+      });
       setSuspendModal(null);
     }
   };
@@ -171,7 +190,11 @@ export default function UsersPage() {
 
   const handleDeleteConfirm = () => {
     if (deleteModal?.user) {
-      setAlert({ type: 'success', message: `User "${deleteModal.user.name}" deleted successfully` });
+      toast({
+        title: 'Success',
+        description: `User "${deleteModal.user.name}" deleted successfully!`,
+        variant: 'success'
+      });
       setDeleteModal(null);
     }
   };
@@ -193,13 +216,13 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {alert && (
+      {/* {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
           <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
             {alert.message}
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       <div className="flex justify-between items-center">
         <div>
