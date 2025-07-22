@@ -13,17 +13,22 @@ import {
   PhotoIcon,
   Cog6ToothIcon,
   UsersIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ChatBubbleBottomCenterTextIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { name: 'Dashboard', href: '/admin', icon: HomeIcon },
+  { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon },
   { name: 'Posts', href: '/admin/posts', icon: DocumentTextIcon },
   { name: 'Pages', href: '/admin/pages', icon: DocumentIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
   { name: 'Tags', href: '/admin/tags', icon: TagIcon },
   { name: 'Media', href: '/admin/media', icon: PhotoIcon },
+  { name: 'Testimonials', href: '/admin/testimonials', icon: ChatBubbleBottomCenterTextIcon },
+  { name: 'Doctors', href: '/admin/doctors', icon: UserGroupIcon },
+  { name: 'Doctor Categories', href: '/admin/doctor-categories', icon: TagIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
   { name: 'SEO Settings', href: '/admin/seo', icon: Cog6ToothIcon },

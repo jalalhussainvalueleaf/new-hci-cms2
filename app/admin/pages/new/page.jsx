@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { slugify } from '@/lib/slugify';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { useRouter } from 'next/navigation';
+
 import {
   Select,
   SelectContent,
@@ -15,130 +20,193 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Save, Eye, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save,Eye } from 'lucide-react';
 
-type Post = {
-  id: number;
-  title: string;
-  content: string;
-  excerpt: string;
-  status: string;
-  category: string;
-  tags: string[];
-  featured: boolean;
-  allowComments: boolean;
-  metaTitle: string;
-  metaDescription: string;
-};
-
-interface EditPostClientProps {
-  postId: number;
-  post: Post | undefined;
-}
-
-export default function EditPostClient({ pageId, page }: EditPostClientProps) {
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-
+export default function NewPagePage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingPages, setLoadingPages] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     content: '',
     excerpt: '',
     status: 'draft',
-    category: '',
-    tags: [] as string[],
+    template: 'default',
+    parentPage: null, // Changed from empty string to null
+    menuOrder: 0,
+    allowComments: false,
     featured: false,
-    allowComments: true,
     metaTitle: '',
     metaDescription: '',
+    focusKeyword: ''
   });
 
-  const [newTag, setNewTag] = useState('');
-
+  // Fetch all pages for parent selection
   useEffect(() => {
-    if (page) {
-      setFormData({
-        title: page.title,
-        content: page.content,
-        excerpt: page.excerpt,
-        status: page.status,
-        category: page.category,
-        tags: page.tags,
-        featured: page.featured,
-        allowComments: page.allowComments,
-        metaTitle: page.metaTitle,
-        metaDescription: page.metaDescription,
-      });
-    }
-    setLoading(false);
-  }, [page]);
+    const fetchPages = async () => {
+      try {
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/pages`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch pages');
+        }
+        
+        const data = await response.json();
+        if (data.pages && Array.isArray(data.pages)) {
+          setPages(data.pages);
+        }
+      } catch (error) {
+        console.error('Error fetching pages:', error);
+        // Optionally show error toast here
+      } finally {
+        setLoadingPages(false);
+      }
+    };
+    
+    fetchPages();
+  }, []);
 
-  const handleInputChange = (field: string, value: string | boolean | string[]) => {
+  // Generate slug from title when title changes and slug is empty
+  // useEffect(() => {
+  //   if (formData.title && !formData.slug) {
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       slug: slugify(prev.title)
+  //     }));
+  //   }
+  // }, [formData.title]);
+
+  const handleInputChange = (field, value) => {
+
+    if (field === 'title') {
+      setFormData(prev => ({
+        ...prev,
+        slug: slugify(value)
+      }));
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      handleInputChange('tags', [...formData.tags, newTag.trim()]);
-      setNewTag('');
+  const handleSlugChange = useCallback((e) => {
+    const newSlug = slugify(e.target.value);
+    handleInputChange('slug', newSlug);
+  }, []);
+
+  const handleTitleChange = (title) => {
+    handleInputChange('title', title);
+    if (!formData.slug) {
+      handleInputChange('slug', slugify(title));
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    handleInputChange('tags', formData.tags.filter(tag => tag !== tagToRemove));
+  // const handleSave = (status) => {
+  //   const pageData = {
+  //     ...formData,
+  //     status,
+  //     createdAt: new Date().toISOString(),
+  //   };
+  //   // console.log('Saving page:', pageData);
+  //   // Here you would typically save to your backend
+  // };
+
+  const handleSave = async (status) => {
+    try {
+      if (!formData.title.trim()) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Title is required'
+        });
+        return;
+      }
+
+      setLoading(true);
+      const postData = {
+        ...formData,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+
+      console.log(postData,"submitted data");
+      
+      const response = await fetch('/api/pages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create post');
+      }
+      
+      // Show success message
+      const action = status === 'published' ? 'published' : 'saved';
+      toast({
+        title: 'Success',
+        description: `Page "${data.page.title}" ${action} successfully!`,
+        variant: 'success'
+      });
+      
+      // If this was a publish action, redirect to posts list
+      if (status === 'published') {
+        router.push('/admin/pages');
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to save post. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSave = (status?: string) => {
-    const postData = {
-      ...formData,
-      status: status || formData.status,
-      updatedAt: new Date().toISOString(),
-    };
-    console.log('Updating post:', postData);
-    setAlert({ type: 'success', message: `Post "${formData.title}" updated successfully` });
-  };
 
-  const handlePreview = () => {
-    setAlert({ type: 'success', message: 'Opening preview...' });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/admin/pages">
+          {/* <Link href="/admin/pages">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Pages
             </Button>
-          </Link>
+          </Link> */}
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add New Page</h1>
             <p className="text-gray-600">Create a new page for your website</p>
           </div>
         </div>
         <div className="flex space-x-2">
+        <Link href="/admin/pages">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Pages
+            </Button>
+          </Link>
           <Button variant="outline" onClick={() => handleSave('draft')}>
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>
-          <Button variant="outline">
+          {/* <Button variant="outline">
             <Eye className="h-4 w-4 mr-2" />
             Preview
-          </Button>
+          </Button> */}
           <Button onClick={() => handleSave('published')}>
             Publish
           </Button>
@@ -167,14 +235,14 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="slug">Slug</Label>
                 <Input
                   id="slug"
-                  value={formData.slug}
-                  onChange={(e) => handleInputChange('slug', e.target.value)}
-                  placeholder="page-slug"
+                  value={formData.slug || ''}
+                  onChange={handleSlugChange}
                   className="mt-1"
+                  placeholder="Auto-generated from title"
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                {/* <p className="text-sm text-gray-500 mt-1">
                   URL: /pages/{formData.slug || 'page-slug'}
-                </p>
+                </p> */}
               </div>
 
               <div>
@@ -211,9 +279,12 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(value) => handleInputChange('status', value)}
+                >
                   <SelectTrigger className="mt-1">
-                    <SelectValue />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
@@ -225,9 +296,12 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
 
               <div>
                 <Label htmlFor="template">Page Template</Label>
-                <Select value={formData.template} onValueChange={(value) => handleInputChange('template', value)}>
+                <Select 
+                  value={formData.template} 
+                  onValueChange={(value) => handleInputChange('template', value)}
+                >
                   <SelectTrigger className="mt-1">
-                    <SelectValue />
+                    <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="default">Default</SelectItem>
@@ -241,15 +315,21 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
 
               <div>
                 <Label htmlFor="parent">Parent Page</Label>
-                <Select value={formData.parentPage} onValueChange={(value) => handleInputChange('parentPage', value)}>
+                <Select 
+                  value={formData.parentPage ?? 'none'}
+                  onValueChange={(value) => handleInputChange('parentPage', value === 'none' ? null : value)}
+                  disabled={loadingPages}
+                >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select parent page" />
+                    <SelectValue placeholder={loadingPages ? 'Loading pages...' : 'Select parent page (optional)'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Parent</SelectItem>
-                    <SelectItem value="about">About Us</SelectItem>
-                    <SelectItem value="services">Services</SelectItem>
-                    <SelectItem value="contact">Contact</SelectItem>
+                    <SelectItem value="none">(No parent) - Top Level Page</SelectItem>
+                    {pages.map((page) => (
+                      <SelectItem key={page._id} value={page._id}>
+                        {page.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -301,6 +381,8 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="metaTitle">Meta Title</Label>
                 <Input
                   id="metaTitle"
+                  value={formData.metaTitle}
+                  onChange={(e) => handleInputChange('metaTitle', e.target.value)}
                   placeholder="SEO title..."
                   className="mt-1"
                 />
@@ -310,6 +392,8 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="metaDescription">Meta Description</Label>
                 <Textarea
                   id="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={(e) => handleInputChange('metaDescription', e.target.value)}
                   placeholder="SEO description..."
                   className="mt-1"
                   rows={3}
@@ -320,6 +404,8 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
                 <Label htmlFor="focusKeyword">Focus Keyword</Label>
                 <Input
                   id="focusKeyword"
+                  value={formData.focusKeyword}
+                  onChange={(e) => handleInputChange('focusKeyword', e.target.value)}
                   placeholder="Primary keyword..."
                   className="mt-1"
                 />
@@ -330,4 +416,4 @@ export default function EditPostClient({ pageId, page }: EditPostClientProps) {
       </div>
     </div>
   );
-} 
+}

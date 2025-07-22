@@ -56,7 +56,7 @@ export default function LoginPage() {
       // Set authentication state
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/admin');
+      router.push('/admin/dashboard');
     } catch (err) {
       setError('Network error. Please try again.');
     } finally {

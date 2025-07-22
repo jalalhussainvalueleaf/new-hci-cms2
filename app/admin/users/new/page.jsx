@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
 import {
   Select,
   SelectContent,
@@ -15,9 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, Mail, User, Shield } from 'lucide-react';
+import { ArrowLeft, Save, Mail, User, Shield, Loader2 } from 'lucide-react';
 
 export default function NewUserPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -31,40 +36,139 @@ export default function NewUserPage() {
     sendWelcomeEmail: true,
     requirePasswordChange: false,
   });
+  const [errors, setErrors] = useState({});
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.username.trim()) newErrors.username = 'Username is required';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    
+    // Clear error when user types
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: null
+      }));
+    }
   };
 
-  const handleSave = () => {
-    console.log('Creating user:', formData);
-    // Here you would typically save to your backend
+  const handleSave = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const userData = {
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        bio: formData.bio,
+        website: formData.website,
+        status: 'active',
+        requirePasswordChange: formData.requirePasswordChange,
+        sendWelcomeEmail: formData.sendWelcomeEmail
+      };
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user');
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'User created successfully!',
+        variant: 'success'
+      });
+      
+      // Redirect to users list
+      router.push('/admin/users');
+      
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to create user. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSave} className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/admin/users">
-            <Button variant="ghost" size="sm">
+          {/* <Link href="/admin/users">
+            <Button type="button" variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Users
             </Button>
-          </Link>
+          </Link> */}
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add New User</h1>
             <p className="text-gray-600">Create a new user account</p>
           </div>
         </div>
-        <Button onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Create User
+        <div className="flex space-x-2">
+        <Link href="/admin/users">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Users
+            </Button>
+          </Link>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Create User
+            </>
+          )}
         </Button>
       </div>
-
+</div>  
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
@@ -77,35 +181,44 @@ export default function NewUserPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="firstName">First Name</Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="firstName">First Name</Label>
+                    {errors.firstName && <span className="text-sm text-red-500">{errors.firstName}</span>}
+                  </div>
                   <Input
                     id="firstName"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                     placeholder="John"
-                    className="mt-1"
+                    className={`mt-1 ${errors.firstName ? 'border-red-500' : ''}`}
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">Last Name (Optional)</Label>
                   <Input
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                     placeholder="Doe"
                     className="mt-1"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="username">Username</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="username">Username</Label>
+                  {errors.username && <span className="text-sm text-red-500">{errors.username}</span>}
+                </div>
                 <Input
                   id="username"
                   value={formData.username}
-                  onChange={(e) => handleInputChange('username', e.target.value)}
+                  onChange={(e) => handleInputChange('username', e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                   placeholder="johndoe"
-                  className="mt-1"
+                  className={`mt-1 ${errors.username ? 'border-red-500' : ''}`}
+                  disabled={isSubmitting}
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Username must be unique and contain only letters, numbers, and underscores
@@ -113,14 +226,18 @@ export default function NewUserPage() {
               </div>
 
               <div>
-                <Label htmlFor="email">Email Address</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="email">Email Address</Label>
+                  {errors.email && <span className="text-sm text-red-500">{errors.email}</span>}
+                </div>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="john.doe@example.com"
-                  className="mt-1"
+                  className={`mt-1 ${errors.email ? 'border-red-500' : ''}`}
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -133,6 +250,7 @@ export default function NewUserPage() {
                   onChange={(e) => handleInputChange('website', e.target.value)}
                   placeholder="https://johndoe.com"
                   className="mt-1"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -145,6 +263,7 @@ export default function NewUserPage() {
                   placeholder="Tell us about this user..."
                   className="mt-1"
                   rows={4}
+                  disabled={isSubmitting}
                 />
               </div>
             </CardContent>
@@ -159,14 +278,18 @@ export default function NewUserPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="password">Password</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="password">Password</Label>
+                  {errors.password && <span className="text-sm text-red-500">{errors.password}</span>}
+                </div>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   placeholder="Enter secure password"
-                  className="mt-1"
+                  className={`mt-1 ${errors.password ? 'border-red-500' : ''}`}
+                  disabled={isSubmitting}
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Password should be at least 8 characters long
@@ -174,14 +297,18 @@ export default function NewUserPage() {
               </div>
 
               <div>
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  {errors.confirmPassword && <span className="text-sm text-red-500">{errors.confirmPassword}</span>}
+                </div>
                 <Input
                   id="confirmPassword"
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   placeholder="Confirm password"
-                  className="mt-1"
+                  className={`mt-1 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -194,6 +321,7 @@ export default function NewUserPage() {
                   id="requirePasswordChange"
                   checked={formData.requirePasswordChange}
                   onCheckedChange={(checked) => handleInputChange('requirePasswordChange', checked)}
+                  disabled={isSubmitting}
                 />
               </div>
             </CardContent>
@@ -208,7 +336,11 @@ export default function NewUserPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="role">User Role</Label>
-                <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                <Select 
+                  value={formData.role} 
+                  onValueChange={(value) => handleInputChange('role', value)}
+                  disabled={isSubmitting}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -259,6 +391,7 @@ export default function NewUserPage() {
                   id="sendWelcomeEmail"
                   checked={formData.sendWelcomeEmail}
                   onCheckedChange={(checked) => handleInputChange('sendWelcomeEmail', checked)}
+                  disabled={isSubmitting}
                 />
               </div>
             </CardContent>
@@ -277,6 +410,6 @@ export default function NewUserPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </form>
   );
 }

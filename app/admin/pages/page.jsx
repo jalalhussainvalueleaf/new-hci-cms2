@@ -1,19 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { toast } from '@/components/ui/use-toast';
 import {
   Table,
   TableBody,
@@ -28,96 +21,155 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  MoreHorizontal, 
+  Edit, 
+  Trash2, 
+  Eye,
+  ArrowUpDown,
+  Loader2
+} from 'lucide-react';
 
-const pages = [
-  {
-    id: 1,
-    title: 'About Us',
-    status: 'published',
-    author: 'Admin',
-    date: '2024-01-10',
-    template: 'Default',
-  },
-  {
-    id: 2,
-    title: 'Contact',
-    status: 'published',
-    author: 'Admin',
-    date: '2024-01-08',
-    template: 'Contact',
-  },
-  {
-    id: 3,
-    title: 'Privacy Policy',
-    status: 'draft',
-    author: 'Legal Team',
-    date: '2024-01-15',
-    template: 'Legal',
-  },
-  {
-    id: 4,
-    title: 'Services',
-    status: 'published',
-    author: 'Marketing',
-    date: '2024-01-12',
-    template: 'Services',
-  },
-];
+// Dialog components
+const Dialog = ({ open, onOpenChange, children }) => (
+  <div className={`fixed inset-0 z-50 flex items-center justify-center ${open ? 'block' : 'hidden'}`}>
+    <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
+    <div className="relative z-50 bg-white rounded-lg w-full max-w-md p-6">
+      {children}
+    </div>
+  </div>
+);
 
-const statusColors = {
-  published: 'bg-green-100 text-green-800',
-  draft: 'bg-yellow-100 text-yellow-800',
-  scheduled: 'bg-blue-100 text-blue-800',
+const DialogHeader = ({ children }) => (
+  <div className="mb-4">
+    {children}
+  </div>
+);
+
+const DialogTitle = ({ children }) => (
+  <h2 className="text-lg font-semibold">{children}</h2>
+);
+
+const DialogContent = ({ children }) => (
+  <div className="relative">
+    {children}
+  </div>
+);
+
+const statuses = {
+  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
+  published: { label: 'Published', color: 'bg-green-100 text-green-800' },
+  archived: { label: 'Archived', color: 'bg-yellow-100 text-yellow-800' },
 };
 
 export default function PagesPage() {
+  const router = useRouter();
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [alert, setAlert] = useState(null);
-  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
-  const filteredPages = pages.filter(page =>
-    page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    page.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    page.template.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch pages from API
+  useEffect(() => {
+    const fetchPages = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/pages');
+        if (response.ok) {
+          const data = await response.json();
+          setPages(data.pages || []);
+        } else {
+          throw new Error('Failed to fetch pages');
+        }
+      } catch (error) {
+        console.error('Error fetching pages:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load pages. Please try again.',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleView = (pageId) => {
-    window.location.href = `/admin/pages/edit/${pageId}`;
-  };
+    fetchPages();
+  }, []);
 
-  const handleEdit = (pageId) => {
-    window.location.href = `/admin/pages/edit/${pageId}`;
-  };
+  // Handle page deletion
+  const handleDelete = async () => {
+    if (!pageToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/pages/${pageToDelete}`, {
+        method: 'DELETE',
+      });
 
-  const handleDeleteClick = (pageId) => {
-    const page = pages.find(p => p.id === pageId);
-    setDeleteModal({ open: true, page });
-  };
-
-  const handleDeleteConfirm = () => {
-    if (deleteModal?.page) {
-      setAlert({ type: 'success', message: `Page "${deleteModal.page.title}" deleted successfully` });
-      setDeleteModal(null);
+      if (response.ok) {
+        setPages(pages.filter(page => page._id !== pageToDelete));
+        toast({
+          title: 'Success',
+          description: 'Page deleted successfully',
+          variant: 'success',
+        });
+      } else {
+        throw new Error('Failed to delete page');
+      }
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete page. Please try again.',
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setPageToDelete(null);
     }
   };
 
-  const handleDeleteCancel = () => {
-    setDeleteModal(null);
+  // Handle sorting
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
-  return (
-    <div className="space-y-6">
-      {alert && (
-        <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
-          <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
-            {alert.message}
-          </AlertDescription>
-        </Alert>
-      )}
+  // Apply sorting and filtering
+  const sortedAndFilteredPages = [...pages]
+    .filter(page => 
+      page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (page.excerpt && page.excerpt.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
 
-      <div className="flex justify-between items-center">
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pages</h1>
           <p className="text-gray-600">Manage your website pages</p>
@@ -131,91 +183,144 @@ export default function PagesPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>All Pages</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search pages..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        <div className="p-4 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search pages..."
+              className="pl-9 w-full sm:w-80"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Template</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPages.map((page) => (
-                <TableRow key={page.id}>
-                  <TableCell className="font-medium">{page.title}</TableCell>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <button 
+                  onClick={() => requestSort('title')} 
+                  className="flex items-center hover:text-gray-900"
+                >
+                  Title
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </button>
+              </TableHead>
+              <TableHead>Author</TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => requestSort('status')} 
+                  className="flex items-center hover:text-gray-900"
+                >
+                  Status
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </button>
+              </TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => requestSort('createdAt')} 
+                  className="flex items-center hover:text-gray-900"
+                >
+                  Date
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </button>
+              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedAndFilteredPages.length > 0 ? (
+              sortedAndFilteredPages.map((page) => (
+                <TableRow key={page._id}>
+                  <TableCell className="font-medium">
+                    <Link 
+                      href={`/admin/pages/edit/${page._id}`}
+                      className="hover:text-blue-600 hover:underline"
+                    >
+                      {page.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{page.author || 'Admin'}</TableCell>
                   <TableCell>
-                    <Badge className={statusColors[page.status]}>
-                      {page.status}
+                    <Badge className={statuses[page.status]?.color || 'bg-gray-100 text-gray-800'}>
+                      {statuses[page.status]?.label || page.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{page.author}</TableCell>
-                  <TableCell>{page.template}</TableCell>
-                  <TableCell>{page.date}</TableCell>
+                  <TableCell>
+                    {new Date(page.createdAt).toLocaleDateString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleView(page.id)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/pages/edit/${page._id}`} className="cursor-pointer">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(page.id)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                        <DropdownMenuItem asChild>
+                          <Link href={`/${page.slug}`} target="_blank" className="cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(page.id)}>
-                          <Trash2 className="h-4 w-4 mr-2" />
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 cursor-pointer"
+                          onClick={() => {
+                            setPageToDelete(page._id);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                  {searchTerm ? 'No pages match your search.' : 'No pages found. Create your first page to get started.'}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </Card>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={deleteModal?.open || false} onOpenChange={(open) => !open && handleDeleteCancel()}>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Page</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{deleteModal?.page?.title}"? This action cannot be undone.
-            </DialogDescription>
+            <p className="text-sm text-gray-500">
+              Are you sure you want to delete this page? This action cannot be undone.
+            </p>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleDeleteCancel}>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+            >
               Delete Page
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
