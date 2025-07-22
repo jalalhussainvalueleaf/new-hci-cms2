@@ -11,7 +11,7 @@ export default function Home() {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     // comment
     if (isAuthenticated) {
-      router.push('/admin');
+      router.push('/admin/dashboard');
     } else {
       router.push('/login');
     }

@@ -25,7 +25,20 @@ export async function GET() {
 export async function POST(request) {
   try {
     const postData = await request.json();
-    const { title, content, excerpt, status = 'draft', category, tags = [], featured = false, allowComments = true, metaTitle, metaDescription } = postData;
+    console.log("postData", postData);
+    const { 
+      title, 
+      content, 
+      excerpt, 
+      status = 'draft', 
+      category, 
+      tags = [], 
+      featured = false, 
+      allowComments = true, 
+      metaTitle, 
+      metaDescription,
+      featuredImage = "" // Add featuredImage to the destructured fields
+    } = postData;
 
     if (!title || !content) {
       return NextResponse.json(
@@ -48,6 +61,8 @@ export async function POST(request) {
       content,
       excerpt: excerpt || content.substring(0, 160) + '...',
       status,
+      // featuredImage: featuredImage || null, // Include featuredImage in the new post
+      featuredImage: featuredImage || "",
       category: category || 'uncategorized',
       tags,
       featured,
@@ -59,7 +74,6 @@ export async function POST(request) {
       updatedAt: new Date(),
       publishedAt: status === 'published' ? new Date() : null,
       views: 0,
-      featuredImage: null
     };
 
     const result = await db.collection('posts').insertOne(newPost);

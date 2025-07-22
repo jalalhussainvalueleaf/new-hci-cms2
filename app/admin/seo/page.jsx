@@ -10,8 +10,13 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, ExternalLink } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { useRouter } from 'next/navigation';
 
 export default function SEOPage() {
+  const router = useRouter();
+  const { toast } = useToast();
   const [alert, setAlert] = useState(null);
   const [seoSettings, setSeoSettings] = useState({
     siteTitle: 'My Awesome Website',
@@ -36,7 +41,11 @@ Sitemap: https://yoursite.com/sitemap.xml`,
 
   const handleSave = () => {
     console.log('Saving SEO settings:', seoSettings);
-    setAlert({ type: 'success', message: 'SEO settings saved successfully' });
+    toast({
+      variant: 'success',
+      title: 'Success',
+      description: 'SEO settings saved successfully'
+    });
   };
 
   return (

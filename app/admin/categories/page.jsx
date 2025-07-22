@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 import {
   Dialog,
   DialogContent,
@@ -31,52 +33,47 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 
-const categories = [
-  {
-    id: 1,
-    name: 'Technology',
-    slug: 'technology',
-    description: 'Posts about technology and innovation',
-    count: 12,
-    parent: null,
-  },
-  {
-    id: 2,
-    name: 'Development',
-    slug: 'development',
-    description: 'Web and software development articles',
-    count: 8,
-    parent: 'Technology',
-  },
-  {
-    id: 3,
-    name: 'Design',
-    slug: 'design',
-    description: 'UI/UX and graphic design content',
-    count: 6,
-    parent: null,
-  },
-  {
-    id: 4,
-    name: 'Business',
-    slug: 'business',
-    description: 'Business and entrepreneurship',
-    count: 4,
-    parent: null,
-  },
-];
-
 export default function CategoriesPage() {
+  const { toast } = useToast();
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [editModal, setEditModal] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [newCategory, setNewCategory] = useState({
     name: '',
     slug: '',
     description: '',
     parent: '',
   });
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      if (data.categories) {
+        setCategories(data.categories.map(cat => ({
+          id: cat._id,
+          name: cat.name,
+          slug: cat.slug,
+          description: cat.description,
+          count: cat.count,
+          parent: cat.parent,
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      setAlert({ type: 'error', message: 'Failed to load categories' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredCategories = categories.filter(category =>
     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,9 +85,39 @@ export default function CategoriesPage() {
       setAlert({ type: 'error', message: 'Category name is required' });
       return;
     }
-    console.log('Adding category:', newCategory);
-    setAlert({ type: 'success', message: `Category "${newCategory.name}" added successfully` });
-    setNewCategory({ name: '', slug: '', description: '', parent: '' });
+    
+    const slug = newCategory.slug || newCategory.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    
+    fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newCategory, slug }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: data.error || 'Failed to create category. Please try again.'
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: `Category "${newCategory.name}" added successfully!`,
+          variant: 'success'
+        });
+        setNewCategory({ name: '', slug: '', description: '', parent: '' });
+        loadCategories();
+      }
+    })
+    .catch(() => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create category. Please try again.'
+      });
+    });
   };
 
   const handleEditClick = (categoryId) => {
@@ -141,13 +168,13 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      {alert && (
+      {/* {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
           <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
             {alert.message}
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       <div className="flex justify-between items-center">
         <div>
@@ -218,6 +245,11 @@ export default function CategoriesPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -265,6 +297,7 @@ export default function CategoriesPage() {
                 ))}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
       </div>
