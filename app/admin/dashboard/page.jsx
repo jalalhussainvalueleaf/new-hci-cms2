@@ -26,6 +26,7 @@ export default function Dashboard() {
     totalUsers: 0,
     totalMedia: 0,
     totalTestimonials: 0,
+    totalDoctors: 0,
     totalCategories: 0,
     totalTags: 0,
     totalPageViews: 0,
@@ -61,6 +62,7 @@ export default function Dashboard() {
         usersData, 
         mediaData, 
         testimonialsData,
+        doctorsData,
         categoriesData,
         analyticsData,
         tagsData
@@ -69,6 +71,7 @@ export default function Dashboard() {
         fetchWithErrorHandling('/api/users', 'Error fetching users'),
         fetchWithErrorHandling('/api/media', 'Error fetching media'),
         fetchWithErrorHandling('/api/testimonials', 'Error fetching testimonials'),
+        fetchWithErrorHandling('/api/doctors', 'Error fetching doctors'),
         fetchWithErrorHandling('/api/categories', 'Error fetching categories'),
         fetchWithErrorHandling('/api/analytics', 'Error fetching analytics'),
         fetchWithErrorHandling('/api/tags', 'Error fetching tags')
@@ -79,6 +82,7 @@ export default function Dashboard() {
       const users = usersData?.users || [];
       const media = mediaData?.media || [];
       const testimonials = testimonialsData?.testimonials || [];
+      const doctors = doctorsData?.doctors || [];
       const categories = categoriesData?.categories || [];
       const tags = tagsData?.tags || [];
       const pageViews = analyticsData?.totalPageViews || 0;
@@ -115,6 +119,7 @@ export default function Dashboard() {
         totalUsers: Array.isArray(users) ? users.length : 0,
         totalMedia: Array.isArray(media) ? media.length : 0,
         totalTestimonials: Array.isArray(testimonials) ? testimonials.length : 0,
+        totalDoctors: Array.isArray(doctors) ? doctors.length : 0,
         totalCategories: Array.isArray(categories) ? categories.length : 0,
         totalTags: Array.isArray(tags) ? tags.length : 0,
         totalPageViews: typeof pageViews === 'number' ? pageViews : 0,
@@ -124,7 +129,8 @@ export default function Dashboard() {
       generateRecentActivity({
         posts: postsData.posts || [],
         users: usersData.users || [],
-        testimonials: testimonialsData.testimonials || []
+        testimonials: testimonialsData.testimonials || [],
+        doctors: doctorsData.doctors || []
       });
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
@@ -172,8 +178,20 @@ export default function Dashboard() {
         link: '/admin/testimonials'
       }));
     
+    // Add recent doctors
+    const recentDoctors = data.doctors
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 2)
+      .map(doctor => ({
+        action: 'New doctor added',
+        item: `Dr. ${doctor.name}`,
+        time: formatTimeAgo(doctor.createdAt),
+        icon: Users,
+        link: '/admin/doctors'
+      }));
+    
     // Combine and sort all activities
-    const allActivities = [...recentPosts, ...recentUsers, ...recentTestimonials]
+    const allActivities = [...recentPosts, ...recentUsers, ...recentTestimonials, ...recentDoctors]
       .sort((a, b) => new Date(b.time) - new Date(a.time))
       .slice(0, 5);
     
@@ -217,6 +235,14 @@ export default function Dashboard() {
       link: '/admin/testimonials'
     },
     {
+      title: 'Doctors',
+      value: stats.totalDoctors.toString(),
+      change: '+15%',
+      changeType: 'positive',
+      icon: Users,
+      link: '/admin/doctors'
+    },
+    {
       title: 'Page Views',
       value: stats.totalPageViews.toLocaleString(),
       change: '+22%',
@@ -244,6 +270,12 @@ export default function Dashboard() {
       value: stats.totalTestimonials.toString(), 
       icon: Star,
       link: '/admin/testimonials'
+    },
+    { 
+      label: 'Doctors', 
+      value: stats.totalDoctors.toString(), 
+      icon: Users,
+      link: '/admin/doctors'
     },
     { 
       label: 'Media Files', 
