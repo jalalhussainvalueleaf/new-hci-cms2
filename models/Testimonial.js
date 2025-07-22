@@ -17,23 +17,32 @@ const testimonialSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    required: true
+    default: ''
+  },
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 5
+  },
+  featured: {
+    type: Boolean,
+    default: false
   },
   status: {
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
 }, {
   timestamps: true
+});
+
+// Add text index for search functionality
+testimonialSchema.index({ 
+  name: 'text', 
+  title: 'text',
+  content: 'text'
 });
 
 export default mongoose.models.Testimonial || mongoose.model('Testimonial', testimonialSchema);
