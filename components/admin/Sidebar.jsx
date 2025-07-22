@@ -14,7 +14,8 @@ import {
   Cog6ToothIcon,
   UsersIcon,
   ChartBarIcon,
-  ChatBubbleBottomCenterTextIcon
+  ChatBubbleBottomCenterTextIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Tags', href: '/admin/tags', icon: TagIcon },
   { name: 'Media', href: '/admin/media', icon: PhotoIcon },
   { name: 'Testimonials', href: '/admin/testimonials', icon: ChatBubbleBottomCenterTextIcon },
+  { name: 'Doctors', href: '/admin/doctors', icon: UserGroupIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
   { name: 'SEO Settings', href: '/admin/seo', icon: Cog6ToothIcon },
