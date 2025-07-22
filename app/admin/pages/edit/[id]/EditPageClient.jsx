@@ -19,7 +19,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Save, Eye, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Upload, X ,ImageIcon} from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -336,13 +336,19 @@ export default function EditPageClient({ pageId, page }) {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Link href="/admin/pages" className="flex items-center text-blue-600 hover:underline">
+          {/* <Link href="/admin/pages" className="flex items-center text-blue-600 hover:underline">
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to Pages
-          </Link>
+          </Link> */}
           <h1 className="text-2xl font-bold mt-2">Edit Page</h1>
         </div>
-        <div className="space-x-2">
+        <div className="space-x-2 flex items-center">
+            <Link href="/admin/pages">
+                      <Button variant="outline">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Pages
+                      </Button>
+                    </Link>
           <Button 
             variant="outline" 
             onClick={handleDraft}
@@ -513,7 +519,7 @@ export default function EditPageClient({ pageId, page }) {
               <div className="space-y-2">
                 <Label htmlFor="parent">Parent Page</Label>
                 <Select
-                  value={formData.parent || 'none'}
+                  value={formData.parent ?? 'none'}
                   onValueChange={(value) => handleInputChange('parent', value === 'none' ? null : value)}
                   disabled={loadingPages}
                 >

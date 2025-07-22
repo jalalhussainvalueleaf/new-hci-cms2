@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { useRouter } from 'next/navigation';
+
 import {
   Select,
   SelectContent,
@@ -16,9 +20,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, Eye } from 'lucide-react';
+import { ArrowLeft, Save,Eye } from 'lucide-react';
 
 export default function NewPagePage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingPages, setLoadingPages] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -26,7 +35,7 @@ export default function NewPagePage() {
     excerpt: '',
     status: 'draft',
     template: 'default',
-    parentPage: '',
+    parentPage: null, // Changed from empty string to null
     menuOrder: 0,
     allowComments: false,
     featured: false,
@@ -35,17 +44,51 @@ export default function NewPagePage() {
     focusKeyword: ''
   });
 
-  // Generate slug from title when title changes and slug is empty
+  // Fetch all pages for parent selection
   useEffect(() => {
-    if (formData.title && !formData.slug) {
-      setFormData(prev => ({
-        ...prev,
-        slug: slugify(prev.title)
-      }));
-    }
-  }, [formData.title]);
+    const fetchPages = async () => {
+      try {
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/pages`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch pages');
+        }
+        
+        const data = await response.json();
+        if (data.pages && Array.isArray(data.pages)) {
+          setPages(data.pages);
+        }
+      } catch (error) {
+        console.error('Error fetching pages:', error);
+        // Optionally show error toast here
+      } finally {
+        setLoadingPages(false);
+      }
+    };
+    
+    fetchPages();
+  }, []);
+
+  // Generate slug from title when title changes and slug is empty
+  // useEffect(() => {
+  //   if (formData.title && !formData.slug) {
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       slug: slugify(prev.title)
+  //     }));
+  //   }
+  // }, [formData.title]);
 
   const handleInputChange = (field, value) => {
+
+    if (field === 'title') {
+      setFormData(prev => ({
+        ...prev,
+        slug: slugify(value)
+      }));
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -64,40 +107,106 @@ export default function NewPagePage() {
     }
   };
 
-  const handleSave = (status) => {
-    const pageData = {
-      ...formData,
-      status,
-      createdAt: new Date().toISOString(),
-    };
-    // console.log('Saving page:', pageData);
-    // Here you would typically save to your backend
+  // const handleSave = (status) => {
+  //   const pageData = {
+  //     ...formData,
+  //     status,
+  //     createdAt: new Date().toISOString(),
+  //   };
+  //   // console.log('Saving page:', pageData);
+  //   // Here you would typically save to your backend
+  // };
+
+  const handleSave = async (status) => {
+    try {
+      if (!formData.title.trim()) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Title is required'
+        });
+        return;
+      }
+
+      setLoading(true);
+      const postData = {
+        ...formData,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+
+      console.log(postData,"submitted data");
+      
+      const response = await fetch('/api/pages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create post');
+      }
+      
+      // Show success message
+      const action = status === 'published' ? 'published' : 'saved';
+      toast({
+        title: 'Success',
+        description: `Page "${data.page.title}" ${action} successfully!`,
+        variant: 'success'
+      });
+      
+      // If this was a publish action, redirect to posts list
+      if (status === 'published') {
+        router.push('/admin/pages');
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to save post. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/admin/pages">
+          {/* <Link href="/admin/pages">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Pages
             </Button>
-          </Link>
+          </Link> */}
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Add New Page</h1>
             <p className="text-gray-600">Create a new page for your website</p>
           </div>
         </div>
         <div className="flex space-x-2">
+        <Link href="/admin/pages">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Pages
+            </Button>
+          </Link>
           <Button variant="outline" onClick={() => handleSave('draft')}>
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>
-          <Button variant="outline">
+          {/* <Button variant="outline">
             <Eye className="h-4 w-4 mr-2" />
             Preview
-          </Button>
+          </Button> */}
           <Button onClick={() => handleSave('published')}>
             Publish
           </Button>
@@ -131,9 +240,9 @@ export default function NewPagePage() {
                   className="mt-1"
                   placeholder="Auto-generated from title"
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                {/* <p className="text-sm text-gray-500 mt-1">
                   URL: /pages/{formData.slug || 'page-slug'}
-                </p>
+                </p> */}
               </div>
 
               <div>
@@ -175,7 +284,7 @@ export default function NewPagePage() {
                   onValueChange={(value) => handleInputChange('status', value)}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
@@ -192,7 +301,7 @@ export default function NewPagePage() {
                   onValueChange={(value) => handleInputChange('template', value)}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue />
+                    <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="default">Default</SelectItem>
@@ -207,17 +316,20 @@ export default function NewPagePage() {
               <div>
                 <Label htmlFor="parent">Parent Page</Label>
                 <Select 
-                  value={formData.parentPage} 
-                  onValueChange={(value) => handleInputChange('parentPage', value)}
+                  value={formData.parentPage ?? 'none'}
+                  onValueChange={(value) => handleInputChange('parentPage', value === 'none' ? null : value)}
+                  disabled={loadingPages}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select parent page" />
+                    <SelectValue placeholder={loadingPages ? 'Loading pages...' : 'Select parent page (optional)'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Parent</SelectItem>
-                    <SelectItem value="about">About Us</SelectItem>
-                    <SelectItem value="services">Services</SelectItem>
-                    <SelectItem value="contact">Contact</SelectItem>
+                    <SelectItem value="none">(No parent) - Top Level Page</SelectItem>
+                    {pages.map((page) => (
+                      <SelectItem key={page._id} value={page._id}>
+                        {page.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

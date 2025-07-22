@@ -413,12 +413,12 @@ export default function EditPostClient({ postId, post }) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/admin/posts">
+          {/* <Link href="/admin/posts">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Posts
             </Button>
-          </Link>
+          </Link> */}
           {/* <div className="flex items-center space-x-2">
             <Button 
               variant="outline" 
@@ -461,6 +461,13 @@ export default function EditPostClient({ postId, post }) {
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button> */}
+
+          <Link href="/admin/posts">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Posts
+            </Button>
+          </Link>
           <Button 
             variant="outline" 
             onClick={() => handleSave('draft')}

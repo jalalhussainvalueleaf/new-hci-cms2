@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,16 +58,13 @@ const statusColors = {
 };
 
 export default function UsersPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [alert, setAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Modal states
-  const [editModal, setEditModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [suspendModal, setSuspendModal] = useState(null);
   const [viewModal, setViewModal] = useState(null);
@@ -78,30 +76,65 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
+      console.log('Fetching users from:', process.env.NODE_ENV === 'production' ? '/api/users' : 'http://localhost:3000/api/users');
+      
       const response = await fetch('/api/users');
-      const data = await response.json();
-      if (data.users) {
-        const processedUsers = data.users.map(user => ({
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-          status: user.status,
-          posts: 0, // TODO: Count posts by user
-          lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
-          avatar: user.name.split(' ').map(n => n[0]).join(''),
-          bio: user.bio || '',
-          website: user.website || '',
-        }));
-        setUsers(processedUsers);
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
       }
+      
+      const data = await response.json();
+      console.log('Users API Response:', data);
+      
+      if (!data.users) {
+        throw new Error('No users array in response');
+      }
+      
+      const processedUsers = data.users.map(user => {
+        if (!user._id) {
+          console.error('User missing _id:', user);
+          return null;
+        }
+        return {
+          ...user,
+          id: user._id,  // Ensure id is set from _id
+          lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+          avatar: user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?',
+          posts: 0, // TODO: Count posts by user
+          // Ensure all required fields have defaults
+          name: user.name || 'Unknown User',
+          email: user.email || 'No email',
+          username: user.username || 'No username',
+          role: user.role || 'subscriber',
+          status: user.status || 'inactive',
+          bio: user.bio || '',
+          website: user.website || ''
+        };
+      }).filter(Boolean); // Remove any null entries from mapping
+      
+      console.log('Processed Users:', processedUsers);
+      setUsers(processedUsers);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('Error in loadUsers:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        env: process.env.NODE_ENV,
+        hasMongoUri: !!process.env.MONGODB_URI,
+        isClientSide: typeof window !== 'undefined'
+      });
+      
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load users. Please try again.'
+        title: 'Error Loading Users',
+        description: error.message || 'Failed to load users. Please check the console for more details.'
       });
     } finally {
       setIsLoading(false);
@@ -123,43 +156,7 @@ export default function UsersPage() {
   };
 
   const handleEditClick = (userId) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      setEditModal({
-        open: true,
-        user: {
-          ...user,
-          editName: user.name,
-          editEmail: user.email,
-          editUsername: user.username,
-          editRole: user.role,
-          editBio: user.bio,
-          editWebsite: user.website,
-        }
-      });
-    }
-  };
-
-  const handleEditSave = () => {
-    if (!editModal?.user.editName.trim() || !editModal?.user.editEmail.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Name and email are required'
-      });
-      return;
-    }
-    console.log('Updating user:', editModal.user);
-    toast({
-      title: 'Success',
-      description: `User "${editModal.user.editName}" updated successfully!`,
-      variant: 'success'
-    });
-    setEditModal(null);
-  };
-
-  const handleEditCancel = () => {
-    setEditModal(null);
+    router.push(`/admin/users/${userId}/edit`);
   };
 
   const handleSuspendClick = (userId) => {
@@ -167,15 +164,47 @@ export default function UsersPage() {
     setSuspendModal({ open: true, user });
   };
 
-  const handleSuspendConfirm = () => {
-    if (suspendModal?.user) {
-      const action = suspendModal.user.status === 'active' ? 'suspended' : 'activated';
+  const handleSuspendConfirm = async () => {
+    if (!suspendModal?.user) return;
+    
+    try {
+      const newStatus = suspendModal.user.status === 'active' ? 'suspended' : 'active';
+      const response = await fetch(`/api/users/${suspendModal.user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user status');
+      }
+
+      // Update local state
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user.id === suspendModal.user.id
+            ? { ...user, status: newStatus }
+            : user
+        )
+      );
+
+      const action = newStatus === 'suspended' ? 'suspended' : 'activated';
       toast({
         title: 'Success',
         description: `User "${suspendModal.user.name}" ${action} successfully!`,
         variant: 'success'
       });
+      
       setSuspendModal(null);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: `Failed to ${suspendModal?.user.status === 'active' ? 'suspend' : 'activate'} user. Please try again.`
+      });
     }
   };
 
@@ -188,14 +217,37 @@ export default function UsersPage() {
     setDeleteModal({ open: true, user });
   };
 
-  const handleDeleteConfirm = () => {
-    if (deleteModal?.user) {
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal?.user) return;
+    
+    try {
+      const response = await fetch(`/api/users/${deleteModal.user.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
+      }
+
+      // Update local state by removing the deleted user
+      setUsers(prevUsers => 
+        prevUsers.filter(user => user.id !== deleteModal.user.id)
+      );
+
       toast({
         title: 'Success',
         description: `User "${deleteModal.user.name}" deleted successfully!`,
         variant: 'success'
       });
+      
       setDeleteModal(null);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete user. Please try again.'
+      });
     }
   };
 
@@ -241,25 +293,35 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{users.length}</div>
             <p className="text-xs text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">18</div>
+            <div className="text-2xl font-bold">
+              {users.filter(user => user.status === 'active').length}
+            </div>
             <p className="text-xs text-muted-foreground">Active Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">
+              {users.filter(user => user.role === 'administrator').length}
+            </div>
             <p className="text-xs text-muted-foreground">Administrators</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">
+              {users.filter(user => {
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                return user.createdAt && new Date(user.createdAt) > oneMonthAgo;
+              }).length}
+            </div>
             <p className="text-xs text-muted-foreground">New This Month</p>
           </CardContent>
         </Card>
@@ -462,119 +524,7 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit User Modal */}
-      <Dialog open={editModal?.open || false} onOpenChange={(open) => !open && handleEditCancel()}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user information and settings
-            </DialogDescription>
-          </DialogHeader>
-          {editModal?.user && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={editModal.user.editName}
-                    onChange={(e) => setEditModal({
-                      ...editModal,
-                      user: { ...editModal.user, editName: e.target.value }
-                    })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-username">Username</Label>
-                  <Input
-                    id="edit-username"
-                    value={editModal.user.editUsername}
-                    onChange={(e) => setEditModal({
-                      ...editModal,
-                      user: { ...editModal.user, editUsername: e.target.value }
-                    })}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-email">Email Address</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editModal.user.editEmail}
-                  onChange={(e) => setEditModal({
-                    ...editModal,
-                    user: { ...editModal.user, editEmail: e.target.value }
-                  })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-role">User Role</Label>
-                <Select 
-                  value={editModal.user.editRole} 
-                  onValueChange={(value) => setEditModal({
-                    ...editModal,
-                    user: { ...editModal.user, editRole: value }
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="administrator">Administrator</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="author">Author</SelectItem>
-                    <SelectItem value="contributor">Contributor</SelectItem>
-                    <SelectItem value="subscriber">Subscriber</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-gray-600 mt-1">
-                  {getRoleDescription(editModal.user.editRole)}
-                </p>
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-website">Website (Optional)</Label>
-                <Input
-                  id="edit-website"
-                  type="url"
-                  value={editModal.user.editWebsite}
-                  onChange={(e) => setEditModal({
-                    ...editModal,
-                    user: { ...editModal.user, editWebsite: e.target.value }
-                  })}
-                  placeholder="https://example.com"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-bio">Bio (Optional)</Label>
-                <Textarea
-                  id="edit-bio"
-                  value={editModal.user.editBio}
-                  onChange={(e) => setEditModal({
-                    ...editModal,
-                    user: { ...editModal.user, editBio: e.target.value }
-                  })}
-                  rows={3}
-                  placeholder="Tell us about this user..."
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={handleEditCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditSave}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit functionality moved to /admin/users/[id]/edit page */}
 
       {/* Suspend/Activate User Modal */}
       <Dialog open={suspendModal?.open || false} onOpenChange={(open) => !open && handleSuspendCancel()}>

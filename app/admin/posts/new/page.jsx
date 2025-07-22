@@ -10,12 +10,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Save, Eye, Upload, X, ImageIcon, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 // Dynamically import the MediaLibraryModal to avoid SSR issues
 const MediaLibraryModal = dynamic(
@@ -89,7 +92,6 @@ export default function NewPostPage() {
     const handleInputChange = (field, value) => {
       
         if (field === 'title') {
-            console.log('title changed', slugify(value));
           setFormData(prev => ({
             ...prev,
             slug: slugify(value)
@@ -297,6 +299,8 @@ export default function NewPostPage() {
         updatedAt: new Date().toISOString(),
       };
 
+      console.log(postData,"submitted data");
+      
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
@@ -343,10 +347,12 @@ export default function NewPostPage() {
           <p className="text-gray-600">Write and publish a new blog post</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" onClick={() => window.open(`/posts/preview`, '_blank')}>
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
+        <Link href="/admin/posts">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Posts
+            </Button>
+          </Link>
           <Button 
             variant="outline" 
             onClick={() => handleSave('draft')}
@@ -390,7 +396,7 @@ export default function NewPostPage() {
                   value={formData.slug || ''}
                   onChange={handleSlugChange}
                   className="mt-1"
-                  placeholder="Auto-generated from title"
+                  // placeholder="Auto-generated from title"
                 />
               </div>
               
@@ -658,14 +664,15 @@ export default function NewPostPage() {
                    </CardHeader>
                    <CardContent>
                      <div className="space-y-2">
-                       <Label htmlFor="featuredImage">Featured Image</Label>
+                <Label htmlFor="featuredImage">Featured Image</Label>
                        <div 
                          className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
                          onClick={() => setShowMediaLibrary(true)}
                        >
                          {/* {formData.featuredImage}  */}
                          {formData.featuredImage ? (
-                           <div className="relative w-full h-48 rounded-md overflow-hidden group">
+                    <div className="relative w-full h-48 rounded-md overflow-hidden group">
+                      {formData.featuredImage} 
                              <img 
                                src={formData.featuredImage} 
                                alt="Featured" 
@@ -729,12 +736,15 @@ export default function NewPostPage() {
 
       {/* Media Library Modal */}
       {showMediaLibrary && (
+        <>
         <MediaLibraryModal
           isOpen={showMediaLibrary}
           onClose={() => setShowMediaLibrary(false)}
           onSelect={handleSelectImage}
           currentImage={formData.featuredImage}
-        />
+          />
+          
+        </>
       )}
       <Toaster />
     </div>
