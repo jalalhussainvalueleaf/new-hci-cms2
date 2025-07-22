@@ -10,8 +10,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, Upload, User, Shield, Bell, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { toast } = useToast();
   const [alert, setAlert] = useState(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -55,21 +60,37 @@ export default function ProfilePage() {
     const updatedUser = { ...currentUser, ...profileData };
     localStorage.setItem('user', JSON.stringify(updatedUser));
     
-    setAlert({ type: 'success', message: 'Profile updated successfully' });
+    toast({
+      variant: 'success',
+      title: 'Success',
+      description: 'Profile updated successfully'
+    });
   };
 
   const handlePasswordChange = () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setAlert({ type: 'error', message: 'New passwords do not match' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'New passwords do not match'
+      });
       return;
     }
     
     if (passwordData.newPassword.length < 6) {
-      setAlert({ type: 'error', message: 'Password must be at least 6 characters long' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Password must be at least 6 characters long'
+      });
       return;
     }
 
-    setAlert({ type: 'success', message: 'Password changed successfully' });
+    toast({
+      variant: 'success',
+      title: 'Success',
+      description: 'Password changed successfully'
+    });
     setPasswordData({
       currentPassword: '',
       newPassword: '',
@@ -79,13 +100,14 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      {alert && (
+      <Toaster />
+      {/* {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
           <AlertDescription className={alert.type === 'error' ? 'text-red-700' : 'text-green-700'}>
             {alert.message}
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
