@@ -35,11 +35,13 @@ export default function NewDoctorPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [doctorCategories, setDoctorCategories] = useState([]);
 
   const [formData, setFormData] = useState({
     image: '',
     name: '',
-    category: 'cardiac-sciences',
+    category: '',
+    categoryId: '',
     qualification: [''],
     experience: '',
     rating: '',
@@ -62,6 +64,23 @@ export default function NewDoctorPage() {
     isFeatured: false,
     reviewEnabled: false
   });
+
+  // Fetch doctor categories on component mount
+  useEffect(() => {
+    const fetchDoctorCategories = async () => {
+      try {
+        const response = await fetch('/api/doctor-categories');
+        if (response.ok) {
+          const data = await response.json();
+          setDoctorCategories(data.categories || []);
+        }
+      } catch (error) {
+        console.error('Error fetching doctor categories:', error);
+      }
+    };
+
+    fetchDoctorCategories();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -359,20 +378,41 @@ export default function NewDoctorPage() {
               <div>
                 <Label htmlFor="category">Category *</Label>
                 <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                  value={formData.categoryId} 
+                  onValueChange={(value) => {
+                    const selectedCategory = doctorCategories.find(cat => cat._id === value);
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      categoryId: value,
+                      category: selectedCategory?.name || ''
+                    }));
+                  }}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cardiac-sciences">Cardiac Sciences</SelectItem>
-                    <SelectItem value="oncology">Oncology</SelectItem>
-                    <SelectItem value="neuro-sciences">Neuro Sciences</SelectItem>
-                    <SelectItem value="gastroenterology">Gastroenterology</SelectItem>
-                    <SelectItem value="orthopedics">Orthopedics</SelectItem>
+                    {doctorCategories
+                      .filter(cat => cat.isActive)
+                      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+                      .map((category) => (
+                        <SelectItem key={category._id} value={category._id}>
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span>{category.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
+                {doctorCategories.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No categories available. Please create doctor categories first.
+                  </p>
+                )}
               </div>
 
               <div>

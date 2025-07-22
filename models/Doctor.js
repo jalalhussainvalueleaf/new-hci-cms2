@@ -13,7 +13,12 @@ const doctorSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['cardiac-sciences', 'oncology', 'neuro-sciences', 'gastroenterology', 'orthopedics'],
+    trim: true,
+  },
+  categoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DoctorCategory',
+    required: [true, 'Category ID is required'],
   },
   qualification: [{
     type: String,

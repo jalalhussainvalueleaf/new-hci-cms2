@@ -54,6 +54,7 @@ export async function PUT(request, { params }) {
       name: doctorData.name,
       image: doctorData.image || '',
       category: doctorData.category,
+      categoryId: doctorData.categoryId,
       qualification: doctorData.qualification || [''],
       experience: doctorData.experience,
       rating: parseFloat(doctorData.rating) || 0,

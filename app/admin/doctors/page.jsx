@@ -42,15 +42,12 @@ import {
   Star,
   Shield,
   Award,
-  Loader2
+  Loader2,
+  Settings
 } from 'lucide-react';
 
 const categoryLabels = {
-  'cardiac-sciences': 'Cardiac Sciences',
-  'oncology': 'Oncology',
-  'neuro-sciences': 'Neuro Sciences',
-  'gastroenterology': 'Gastroenterology',
-  'orthopedics': 'Orthopedics',
+  // This will be populated from the database
 };
 
 const statusColors = {
@@ -65,6 +62,7 @@ export default function DoctorsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [doctorToDelete, setDoctorToDelete] = useState(null);
+  const [doctorCategories, setDoctorCategories] = useState([]);
 
   // Fetch doctors from API
   useEffect(() => {
@@ -91,6 +89,23 @@ export default function DoctorsPage() {
     };
 
     fetchDoctors();
+  }, []);
+
+  // Fetch doctor categories
+  useEffect(() => {
+    const fetchDoctorCategories = async () => {
+      try {
+        const response = await fetch('/api/doctor-categories');
+        if (response.ok) {
+          const data = await response.json();
+          setDoctorCategories(data.categories || []);
+        }
+      } catch (error) {
+        console.error('Error fetching doctor categories:', error);
+      }
+    };
+
+    fetchDoctorCategories();
   }, []);
 
   // Handle doctor deletion
@@ -128,11 +143,29 @@ export default function DoctorsPage() {
   // Apply filtering
   const filteredDoctors = doctors.filter(doctor => 
     doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doctor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doctor.category && doctor.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (doctor.expertise && doctor.expertise.some(exp => 
       exp.toLowerCase().includes(searchTerm.toLowerCase())
     ))
   );
+
+  // Helper function to get category display name
+  const getCategoryDisplay = (doctor) => {
+    if (doctor.categoryId) {
+      const category = doctorCategories.find(cat => cat._id === doctor.categoryId);
+      return category ? category.name : doctor.category || 'Unknown';
+    }
+    return doctor.category || 'Unknown';
+  };
+
+  // Helper function to get category color
+  const getCategoryColor = (doctor) => {
+    if (doctor.categoryId) {
+      const category = doctorCategories.find(cat => cat._id === doctor.categoryId);
+      return category?.color || '#3B82F6';
+    }
+    return '#3B82F6';
+  };
 
   if (loading) {
     return (
@@ -149,12 +182,20 @@ export default function DoctorsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Doctors</h1>
           <p className="text-gray-600">Manage doctor profiles and information</p>
         </div>
-        <Link href="/admin/doctors/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Doctor
-          </Button>
-        </Link>
+        <div className="flex space-x-2">
+          <Link href="/admin/doctor-categories">
+            <Button variant="outline">
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Categories
+            </Button>
+          </Link>
+          <Link href="/admin/doctors/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Doctor
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -256,8 +297,20 @@ export default function DoctorsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {categoryLabels[doctor.category] || doctor.category}
+                      <Badge 
+                        variant="outline"
+                        style={{ 
+                          borderColor: getCategoryColor(doctor),
+                          color: getCategoryColor(doctor)
+                        }}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: getCategoryColor(doctor) }}
+                          />
+                          <span>{getCategoryDisplay(doctor)}</span>
+                        </div>
                       </Badge>
                     </TableCell>
                     <TableCell>{doctor.experience}</TableCell>
