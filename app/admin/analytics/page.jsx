@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,8 +22,18 @@ import {
   Smartphone,
   Monitor,
   Tablet,
-  Download
+  Download,
+  ArrowUpRight
 } from 'lucide-react';
+
+// Import the chart component
+import dynamic from 'next/dynamic';
+
+// Dynamically import the chart component with SSR disabled
+const TimeSeriesChart = dynamic(
+  () => import('@/components/analytics/TimeSeriesChart'),
+  { ssr: false }
+);
 
 const overviewStats = [
   {
@@ -77,8 +87,63 @@ const deviceStats = [
   { device: 'Tablet', icon: Tablet, visitors: 1766, percentage: 7 },
 ];
 
+// Icons mapping
+const iconComponents = {
+  Users,
+  Eye,
+  MousePointer,
+  Clock,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Globe,
+  BarChart3,
+  TrendingUp
+};
+
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('7days');
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    overviewStats: [],
+    topPages: [],
+    trafficSources: [],
+    deviceStats: [],
+    timeSeries: {
+      labels: [],
+      visitors: [],
+      pageViews: [],
+      interval: 'day'
+    }
+  });
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/analytics?range=${dateRange}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch analytics');
+        }
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [dateRange]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -108,8 +173,8 @@ export default function AnalyticsPage() {
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {overviewStats.map((stat) => {
-          const Icon = stat.icon;
+        {data.overviewStats.map((stat) => {
+          const Icon = iconComponents[stat.icon] || BarChart3;
           return (
             <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -120,8 +185,12 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                <div className="flex items-center text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3 mr-1" />
+                <div className={`flex items-center text-xs ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                  {stat.changeType === 'positive' ? (
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                  ) : (
+                    <TrendingUp className="h-3 w-3 mr-1 transform rotate-180" />
+                  )}
                   {stat.change} from last period
                 </div>
               </CardContent>
@@ -140,30 +209,60 @@ export default function AnalyticsPage() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Visitors Over Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                  <div className="text-center">
-                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">Chart visualization would go here</p>
+            {/* Visitors Over Time */}
+            <Card className="h-full flex flex-col">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold">Visitors Over Time</CardTitle>
+                  <div className="flex items-center text-sm text-green-600">
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                    <span>12.5% from last period</span>
                   </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 mr-2"></div>
+                    <span className="text-sm text-gray-600">Total Visitors</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 flex-1">
+                <div className="h-full w-full">
+                  <TimeSeriesChart 
+                    title=""
+                    labels={data.timeSeries.labels}
+                    data={data.timeSeries.visitors}
+                    borderColor="#3b82f6"
+                  />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Page Views Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                  <div className="text-center">
-                    <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">Chart visualization would go here</p>
+            {/* Page Views Trend */}
+            <Card className="h-full flex flex-col">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold">Page Views Trend</CardTitle>
+                  <div className="flex items-center text-sm text-green-600">
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                    <span>8.2% from last period</span>
                   </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                    <span className="text-sm text-gray-600">Total Page Views</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 flex-1">
+                <div className="h-full w-full">
+                  <TimeSeriesChart 
+                    title=""
+                    labels={data.timeSeries.labels}
+                    data={data.timeSeries.pageViews}
+                    borderColor="#10b981"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -177,7 +276,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {topPages.map((page, index) => (
+                {data.topPages.map((page, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{page.page}</p>
@@ -209,7 +308,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {trafficSources.map((source, index) => (
+                {data.trafficSources.map((source, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Globe className="h-5 w-5 text-gray-500" />
@@ -244,8 +343,8 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {deviceStats.map((device, index) => {
-                  const Icon = device.icon;
+                {data.deviceStats.map((device, index) => {
+                  const Icon = iconComponents[device.icon] || Monitor;
                   return (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
